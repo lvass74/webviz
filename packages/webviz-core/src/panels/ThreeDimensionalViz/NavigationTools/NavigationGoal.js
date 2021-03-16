@@ -13,35 +13,37 @@ import { type ReglClickInfo } from "regl-worldview";
 import type { Point } from "webviz-core/src/types/Messages";
 import { arrayToPoint } from "webviz-core/src/util";
 
-export type MeasureState = "idle" | "place-start" | "place-finish";
+export type NavigationGoalState = "idle" | "place-start" | "place-finish";
 
-export type MeasureInfo = {|
-  measureState: MeasureState,
-    measurePoints: { start: ? Point, end: ?Point },
+export type NavigationGoalInfo = {|
+  state: NavigationGoalState,
+    points: { start: ? Point, end: ?Point },
 |};
 
 type Props = {|
-  onMeasureInfoChange: (MeasureInfo) => void,
-  ...MeasureInfo,
+  onNavigationGoalInfoChange: (NavigationGoalInfo) => void,
+  ...NavigationGoalInfo,
 |};
 
 /* eslint-disable no-restricted-syntax */
 
-export default class MeasuringTool extends React.Component<Props> {
+export default class NavigationGoal extends React.Component<Props> {
   mouseDownCoords: number[] = [-1, -1];
 
-  toggleMeasureState = () => {
-    const newMeasureState = this.props.measureState === "idle" ? "place-start" : "idle";
-    this.props.onMeasureInfoChange({
-      measureState: newMeasureState,
-      measurePoints: { start: undefined, end: undefined },
+  toggleState = () => {
+    console.log('toggleState', this.props.state)
+    const newState = this.props.state === "idle" ? "place-start" : "idle";
+    console.log('toggleState', newState)
+    this.props.onNavigationGoalInfoChange({
+      state: newState,
+      points: { start: undefined, end: undefined },
     });
   };
 
   reset = () => {
-    this.props.onMeasureInfoChange({
-      measureState: "idle",
-      measurePoints: { start: undefined, end: undefined },
+    this.props.onNavigationGoalInfoChange({
+      state: "idle",
+      points: { start: undefined, end: undefined },
     });
   };
 
@@ -52,31 +54,30 @@ export default class MeasuringTool extends React.Component<Props> {
 
   _canvasMouseUpHandler = (e: MouseEvent, _clickInfo: ReglClickInfo) => {
     const mouseUpCoords = [e.clientX, e.clientY];
-    const { measureState, measurePoints, onMeasureInfoChange } = this.props;
+    const { state, points, onNavigationGoalInfoChange } = this.props;
 
     if (!isEqual(mouseUpCoords, this.mouseDownCoords)) {
       return;
     }
 
-    if (measureState === "place-start") {
-      onMeasureInfoChange({ measureState: "place-finish", measurePoints });
-    } else if (measureState === "place-finish") {
+    if (state === "place-start") {
+      onNavigationGoalInfoChange({ state: "place-finish", points });
+    } else if (state === "place-finish") {
       // Use setImmediate so there is a tick between resetting the measure state and clicking the 3D canvas.
-      // If we call onMeasureInfoChange right away, the clicked object context menu will show up upon finishing measuring.
+      // If we call onNavigationGoalInfoChange right away, the clicked object context menu will show up upon finishing measuring.
       setImmediate(() => {
-        onMeasureInfoChange({ measurePoints, measureState: "idle" });
+        onNavigationGoalInfoChange({ points, state: "idle" });
       });
     }
   };
 
   _canvasMouseMoveHandler = (e: MouseEvent, clickInfo: ReglClickInfo) => {
-    const { measureState, measurePoints, onMeasureInfoChange } = this.props;
-    console.log('Mesure')
-    switch (measureState) {
+    const { state, points, onNavigationGoalInfoChange } = this.props;
+    switch (state) {
       case "place-start":
-        onMeasureInfoChange({
-          measureState,
-          measurePoints: {
+        onNavigationGoalInfoChange({
+          state,
+          points: {
             start: arrayToPoint(clickInfo.ray.planeIntersection([0, 0, 0], [0, 0, 1])),
             end: undefined,
           },
@@ -84,10 +85,10 @@ export default class MeasuringTool extends React.Component<Props> {
         break;
 
       case "place-finish":
-        onMeasureInfoChange({
-          measureState,
-          measurePoints: {
-            ...measurePoints,
+        onNavigationGoalInfoChange({
+          state,
+          points: {
+            ...points,
             end: arrayToPoint(clickInfo.ray.planeIntersection([0, 0, 0], [0, 0, 1])),
           },
         });
@@ -120,12 +121,12 @@ export default class MeasuringTool extends React.Component<Props> {
   }
 
   get measureActive(): boolean {
-    const { measureState } = this.props;
-    return measureState === "place-start" || measureState === "place-finish";
+    const { state } = this.props;
+    return state === "place-start" || state === "place-finish";
   }
 
   get measureDistance(): string {
-    const { start, end } = this.props.measurePoints;
+    const { start, end } = this.props.points;
     let dist_string = "";
     if (start && end) {
       const dist = Math.hypot(end.x - start.x, end.y - start.y, end.z - start.z);

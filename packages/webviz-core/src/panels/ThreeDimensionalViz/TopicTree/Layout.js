@@ -35,6 +35,7 @@ import { type Save3DConfig, type ThreeDimensionalVizConfig } from "webviz-core/s
 import DebugStats from "webviz-core/src/panels/ThreeDimensionalViz/DebugStats";
 import { POLYGON_TAB_TYPE, type DrawingTabType } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools";
 import MeasuringTool, { type MeasureInfo } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools/MeasuringTool";
+import NavigationGoal, { type NavigationGoalInfo } from "webviz-core/src/panels/ThreeDimensionalViz/NavigationTools/NavigationGoal";
 import { InteractionContextMenu, OBJECT_TAB_TYPE } from "webviz-core/src/panels/ThreeDimensionalViz/Interactions";
 import useLinkedGlobalVariables from "webviz-core/src/panels/ThreeDimensionalViz/Interactions/useLinkedGlobalVariables";
 import styles from "webviz-core/src/panels/ThreeDimensionalViz/Layout.module.scss";
@@ -76,38 +77,38 @@ type EventName = "onDoubleClick" | "onMouseMove" | "onMouseDown" | "onMouseUp";
 export type ClickedPosition = { clientX: number, clientY: number };
 
 export type LayoutToolbarSharedProps = {|
-  cameraState: $Shape<CameraState>,
-  followOrientation: boolean,
-  followTf?: string | false,
-  onAlignXYAxis: () => void,
-  onCameraStateChange: (CameraState) => void,
-  onFollowChange: (followTf?: string | false, followOrientation?: boolean) => void,
-  saveConfig: Save3DConfig,
-  targetPose: ?TargetPose,
-  transforms: Transforms,
-  isPlaying?: boolean,
+  cameraState: $Shape < CameraState >,
+    followOrientation: boolean,
+      followTf ?: string | false,
+      onAlignXYAxis: () => void,
+        onCameraStateChange: (CameraState) => void,
+          onFollowChange: (followTf?: string | false, followOrientation?: boolean) => void,
+            saveConfig: Save3DConfig,
+              targetPose: ?TargetPose,
+                transforms: Transforms,
+                  isPlaying ?: boolean,
 |};
 
 export type LayoutTopicSettingsSharedProps = {|
   transforms: Transforms,
-  topics: Topic[],
-  saveConfig: Save3DConfig,
+    topics: Topic[],
+      saveConfig: Save3DConfig,
 |};
 
 type Props = {|
   ...LayoutToolbarSharedProps,
   ...LayoutTopicSettingsSharedProps,
-  children?: Node,
-  cleared?: boolean,
+  children ?: Node,
+  cleared ?: boolean,
   currentTime: Time,
-  frame?: Frame,
-  helpContent: Node | string,
-  isPlaying?: boolean,
-  config: ThreeDimensionalVizConfig,
-  saveConfig: Save3DConfig,
-  setSubscriptions: (subscriptions: string[]) => void,
-  topics: Topic[],
-  transforms: Transforms,
+    frame ?: Frame,
+    helpContent: Node | string,
+      isPlaying ?: boolean,
+      config: ThreeDimensionalVizConfig,
+        saveConfig: Save3DConfig,
+          setSubscriptions: (subscriptions: string[]) => void,
+            topics: Topic[],
+              transforms: Transforms,
 |};
 
 export type UserSelectionState = {
@@ -166,31 +167,36 @@ export default function Layout({
   },
 }: Props) {
   const [filterText, setFilterText] = useState(""); // Topic tree text for filtering to see certain topics.
-  const containerRef = useRef<?HTMLDivElement>();
+  const containerRef = useRef <? HTMLDivElement > ();
   const { linkedGlobalVariables } = useLinkedGlobalVariables();
   const { globalVariables, setGlobalVariables } = useGlobalVariables();
   const [debug, setDebug] = useState(false);
-  const [showTopicTree, setShowTopicTree] = useState<boolean>(false);
+  const [showTopicTree, setShowTopicTree] = useState < boolean > (false);
   const [polygonBuilder, setPolygonBuilder] = useState(() => new PolygonBuilder());
-  const [measureInfo, setMeasureInfo] = useState<MeasureInfo>({
+  const [measureInfo, setMeasureInfo] = useState < MeasureInfo > ({
     measureState: "idle",
     measurePoints: { start: undefined, end: undefined },
   });
-  const [currentEditingTopic, setCurrentEditingTopic] = useState<?Topic>(undefined);
-  const [editingNamespace, setEditingNamespace] = useState<?{
+  const [navigationGoalInfo, setNavigationGoalInfo] = useState < NavigationGoalInfo > ({
+    state: "idle",
+    points: { start: undefined, end: undefined },
+  });
+  const [currentEditingTopic, setCurrentEditingTopic] = useState <? Topic > (undefined);
+  const [editingNamespace, setEditingNamespace] = useState <? {
     namespaceKey: string,
-    namespaceColor: ?string,
-  }>();
+    namespaceColor: ? string,
+  } > ();
 
   const searchTextProps = useSearchText();
   const { searchTextOpen, searchText, setSearchTextMatches, searchTextMatches, selectedMatchIndex } = searchTextProps;
   // used for updating DrawPolygon during mouse move and scenebuilder namespace change.
   const [_, forceUpdate] = useReducer((x) => x + 1, 0);
-  const measuringElRef = useRef<?MeasuringTool>(null);
-  const [drawingTabType, setDrawingTabType] = useState<?DrawingTabType>(undefined);
-  const [interactionsTabType, setInteractionsTabType] = useState<?DrawingTabType>(undefined);
+  const measuringElRef = useRef <? MeasuringTool > (null);
+  const navigationGoalElRef = useRef <? NavigationGoal > (null);
+  const [drawingTabType, setDrawingTabType] = useState <? DrawingTabType > (undefined);
+  const [interactionsTabType, setInteractionsTabType] = useState <? DrawingTabType > (undefined);
 
-  const [selectionState, setSelectionState] = useState<UserSelectionState>({
+  const [selectionState, setSelectionState] = useState < UserSelectionState > ({
     clickedObjects: [],
     clickedPosition: { clientX: 0, clientY: 0 },
     selectedObject: null,
@@ -199,7 +205,7 @@ export default function Layout({
 
   // Since the highlightedMarkerMatchers are updated by mouse events, we wait
   // a short amount of time to prevent excessive re-rendering of the 3D panel
-  const [hoveredMarkerMatchers, setHoveredMarkerMatchers] = useState<MarkerMatcher[]>([]);
+  const [hoveredMarkerMatchers, setHoveredMarkerMatchers] = useState < MarkerMatcher[] > ([]);
   const [setHoveredMarkerMatchersDebounced] = useDebouncedCallback(setHoveredMarkerMatchers, 100);
 
   const isDrawing = useMemo(() => measureInfo.measureState !== "idle" || drawingTabType === POLYGON_TAB_TYPE, [
@@ -314,20 +320,20 @@ export default function Layout({
       const topic = getInteractionData(selectedObject)?.topic;
       return marker && topic
         ? [
-            {
-              topic,
-              checks: [
-                {
-                  markerKeyPath: ["id"],
-                  value: getField(marker, "id"),
-                },
-                {
-                  markerKeyPath: ["ns"],
-                  value: getField(marker, "ns"),
-                },
-              ],
-            },
-          ]
+          {
+            topic,
+            checks: [
+              {
+                markerKeyPath: ["id"],
+                value: getField(marker, "id"),
+              },
+              {
+                markerKeyPath: ["ns"],
+                value: getField(marker, "ns"),
+              },
+            ],
+          },
+        ]
         : [];
     }
     return [];
@@ -340,21 +346,21 @@ export default function Layout({
       return (colorOverrideBySourceIdxByVariable?.[name] || []).flatMap((override, i) =>
         override?.active
           ? [
-              ..._activeColorOverrideMatchers,
-              ...(linkedGlobalVariablesByName[name] || []).map(({ topic, markerKeyPath }) => {
-                const baseTopic = topic.replace(SECOND_SOURCE_PREFIX, "");
-                return {
-                  topic: i === 0 ? baseTopic : joinTopics(SECOND_SOURCE_PREFIX, baseTopic),
-                  checks: [
-                    {
-                      markerKeyPath,
-                      value: globalVariables[name],
-                    },
-                  ],
-                  color: override.color,
-                };
-              }),
-            ]
+            ..._activeColorOverrideMatchers,
+            ...(linkedGlobalVariablesByName[name] || []).map(({ topic, markerKeyPath }) => {
+              const baseTopic = topic.replace(SECOND_SOURCE_PREFIX, "");
+              return {
+                topic: i === 0 ? baseTopic : joinTopics(SECOND_SOURCE_PREFIX, baseTopic),
+                checks: [
+                  {
+                    markerKeyPath,
+                    value: globalVariables[name],
+                  },
+                ],
+                color: override.color,
+              };
+            }),
+          ]
           : _activeColorOverrideMatchers
       );
     }, []);
@@ -528,286 +534,289 @@ export default function Layout({
           return;
         }
         const target = ((ev.target: any): HTMLElement);
-        // Only close if the click target is inside the panel, e.g. don't close when dropdown menus rendered in portals are clicked
-        if (containerRef.current.contains(target)) {
-          setShowTopicTree(false);
-        }
-      },
-      onDoubleClick: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onDoubleClick", ev, args),
-      onExitTopicTreeFocus: () => {
-        if (containerRef.current) {
-          containerRef.current.focus();
-        }
-      },
-      onMouseDown: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onMouseDown", ev, args),
+  // Only close if the click target is inside the panel, e.g. don't close when dropdown menus rendered in portals are clicked
+  if (containerRef.current.contains(target)) {
+    setShowTopicTree(false);
+  }
+},
+onDoubleClick: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onDoubleClick", ev, args),
+  onExitTopicTreeFocus: () => {
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
+  },
+    onMouseDown: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onMouseDown", ev, args),
       onMouseMove: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onMouseMove", ev, args),
-      onMouseUp: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onMouseUp", ev, args),
-      onSetPolygons: (polygons: Polygon[]) => setPolygonBuilder(new PolygonBuilder(polygons)),
-      toggleDebug: () => setDebug(!callbackInputsRef.current.debug),
-      toggleCameraMode: () => {
-        const { cameraState: currentCameraState, saveConfig: currentSaveConfig } = callbackInputsRef.current;
-        const newPerspective = !currentCameraState.perspective;
-        currentSaveConfig({ cameraState: { ...currentCameraState, perspective: newPerspective } });
-        if (measuringElRef.current && currentCameraState.perspective) {
-          measuringElRef.current.reset();
-        }
-        // Automatically enable/disable map height based on 3D/2D mode
-        const mapHeightEnabled = (selectedNamespacesByTopic["/metadata"] || []).includes("height");
-        if (mapHeightEnabled !== newPerspective) {
-          toggleNamespaceChecked({
-            topicName: "/metadata",
-            namespace: "height",
-            columnIndex: 0,
-          });
-        }
-      },
+        onMouseUp: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onMouseUp", ev, args),
+          onSetPolygons: (polygons: Polygon[]) => setPolygonBuilder(new PolygonBuilder(polygons)),
+            toggleDebug: () => setDebug(!callbackInputsRef.current.debug),
+              toggleCameraMode: () => {
+                const { cameraState: currentCameraState, saveConfig: currentSaveConfig } = callbackInputsRef.current;
+                const newPerspective = !currentCameraState.perspective;
+                currentSaveConfig({ cameraState: { ...currentCameraState, perspective: newPerspective } });
+                if (measuringElRef.current && currentCameraState.perspective) {
+                  measuringElRef.current.reset();
+                }
+                // Automatically enable/disable map height based on 3D/2D mode
+                const mapHeightEnabled = (selectedNamespacesByTopic["/metadata"] || []).includes("height");
+                if (mapHeightEnabled !== newPerspective) {
+                  toggleNamespaceChecked({
+                    topicName: "/metadata",
+                    namespace: "height",
+                    columnIndex: 0,
+                  });
+                }
+              },
     };
   }, [handleEvent, selectObject, selectedNamespacesByTopic, toggleNamespaceChecked]);
 
-  // When the TopicTree is hidden, focus the <World> again so keyboard controls continue to work
-  const worldRef = useRef<?typeof Worldview>(null);
-  useEffect(() => {
-    if (!showTopicTree && worldRef.current) {
-      worldRef.current.focus();
-    }
-  }, [showTopicTree]);
+// When the TopicTree is hidden, focus the <World> again so keyboard controls continue to work
+const worldRef = useRef <? typeof Worldview > (null);
+useEffect(() => {
+  if (!showTopicTree && worldRef.current) {
+    worldRef.current.focus();
+  }
+}, [showTopicTree]);
 
-  const keyDownHandlers = useMemo(() => {
-    const handlers: { [key: string]: (e: KeyboardEvent) => void } = {
-      "3": () => {
-        toggleCameraMode();
-      },
-      Escape: (e) => {
+const keyDownHandlers = useMemo(() => {
+  const handlers: { [key: string]: (e: KeyboardEvent) => void } = {
+    "3": () => {
+      toggleCameraMode();
+    },
+    Escape: (e) => {
+      e.preventDefault();
+      setShowTopicTree(false);
+      setDrawingTabType(null);
+      searchTextProps.toggleSearchTextOpen(false);
+      if (document.activeElement && document.activeElement === containerRef.current) {
+        document.activeElement.blur();
+      }
+    },
+    t: (e) => {
+      e.preventDefault();
+      // Unpin before enabling keyboard toggle open/close.
+      if (pinTopics) {
+        saveConfig({ pinTopics: false });
+        return;
+      }
+      setShowTopicTree((shown) => !shown);
+    },
+    f: (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        setShowTopicTree(false);
-        setDrawingTabType(null);
-        searchTextProps.toggleSearchTextOpen(false);
-        if (document.activeElement && document.activeElement === containerRef.current) {
-          document.activeElement.blur();
-        }
-      },
-      t: (e) => {
-        e.preventDefault();
-        // Unpin before enabling keyboard toggle open/close.
-        if (pinTopics) {
-          saveConfig({ pinTopics: false });
+        searchTextProps.toggleSearchTextOpen(true);
+        if (!searchTextProps.searchInputRef || !searchTextProps.searchInputRef.current) {
           return;
         }
-        setShowTopicTree((shown) => !shown);
-      },
-      f: (e: KeyboardEvent) => {
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
-          searchTextProps.toggleSearchTextOpen(true);
-          if (!searchTextProps.searchInputRef || !searchTextProps.searchInputRef.current) {
-            return;
-          }
-          searchTextProps.searchInputRef.current.select();
-        }
-      },
-    };
-    return handlers;
-  }, [pinTopics, saveConfig, searchTextProps, toggleCameraMode]);
+        searchTextProps.searchInputRef.current.select();
+      }
+    },
+  };
+  return handlers;
+}, [pinTopics, saveConfig, searchTextProps, toggleCameraMode]);
 
-  const markerProviders = useMemo(() => [sceneBuilder, transformsBuilder], [sceneBuilder, transformsBuilder]);
+const markerProviders = useMemo(() => [sceneBuilder, transformsBuilder], [sceneBuilder, transformsBuilder]);
 
-  const cursorType = isDrawing ? "crosshair" : "";
-  const { isHovered } = useContext(PanelContext) || {};
-  const isDemoMode = useExperimentalFeature("demoMode");
-  const isHidden = isDemoMode && !isHovered;
-  const DemoModeComponent = getGlobalHooks().getDemoModeComponent();
+const cursorType = isDrawing ? "crosshair" : "";
+const { isHovered } = useContext(PanelContext) || {};
+const isDemoMode = useExperimentalFeature("demoMode");
+const isHidden = isDemoMode && !isHovered;
+const DemoModeComponent = getGlobalHooks().getDemoModeComponent();
 
-  const { MapComponent, videoRecordingStyle } = useMemo(
-    () => ({
-      MapComponent: getGlobalHooks().perPanelHooks().ThreeDimensionalViz.MapComponent,
-      videoRecordingStyle: { visibility: inVideoRecordingMode() ? "hidden" : "visible" },
-    }),
-    []
-  );
+const { MapComponent, videoRecordingStyle } = useMemo(
+  () => ({
+    MapComponent: getGlobalHooks().perPanelHooks().ThreeDimensionalViz.MapComponent,
+    videoRecordingStyle: { visibility: inVideoRecordingMode() ? "hidden" : "visible" },
+  }),
+  []
+);
 
-  const memoizedScene = useShallowMemo(sceneBuilder.getScene());
-  const mapNamespaces = useShallowMemo(selectedNamespacesByTopic["/metadata"] || []);
-  const mapElement = useMemo(
-    () =>
-      MapComponent && (
-        <MapComponent
-          extensions={mapNamespaces}
-          scene={memoizedScene}
-          debug={debug}
-          perspective={!!cameraState.perspective}
-          isDemoMode={isDemoMode}
+const memoizedScene = useShallowMemo(sceneBuilder.getScene());
+const mapNamespaces = useShallowMemo(selectedNamespacesByTopic["/metadata"] || []);
+const mapElement = useMemo(
+  () =>
+    MapComponent && (
+      <MapComponent
+        extensions={mapNamespaces}
+        scene={memoizedScene}
+        debug={debug}
+        perspective={!!cameraState.perspective}
+        isDemoMode={isDemoMode}
+      />
+    ),
+  [MapComponent, cameraState.perspective, debug, isDemoMode, mapNamespaces, memoizedScene]
+);
+
+// Memoize the threeDimensionalVizContextValue to avoid returning a new object every time
+const threeDimensionalVizContextValue = useMemo(
+  () => ({
+    setColorOverrideBySourceIdxByVariable,
+    setHoveredMarkerMatchers: setHoveredMarkerMatchersDebounced,
+    colorOverrideBySourceIdxByVariable: colorOverrideBySourceIdxByVariable || {},
+  }),
+  [colorOverrideBySourceIdxByVariable, setColorOverrideBySourceIdxByVariable, setHoveredMarkerMatchersDebounced]
+);
+
+return (
+  <ThreeDimensionalVizContext.Provider value={threeDimensionalVizContextValue}>
+    <TopicTreeContext.Provider value={topicTreeData}>
+      <div
+        ref={containerRef}
+        onClick={onControlsOverlayClick}
+        tabIndex={-1}
+        className={styles.container}
+        style={{ cursor: cursorType }}
+        data-test="3dviz-layout">
+        <KeyListener keyDownHandlers={keyDownHandlers} />
+        <PanelToolbarMenu
+          autoTextBackgroundColor={!!autoTextBackgroundColor}
+          checkedKeys={checkedKeys}
+          flattenMarkers={!!flattenMarkers}
+          helpContent={helpContent}
+          saveConfig={saveConfig}
+          settingsByKey={settingsByKey}
         />
-      ),
-    [MapComponent, cameraState.perspective, debug, isDemoMode, mapNamespaces, memoizedScene]
-  );
-
-  // Memoize the threeDimensionalVizContextValue to avoid returning a new object every time
-  const threeDimensionalVizContextValue = useMemo(
-    () => ({
-      setColorOverrideBySourceIdxByVariable,
-      setHoveredMarkerMatchers: setHoveredMarkerMatchersDebounced,
-      colorOverrideBySourceIdxByVariable: colorOverrideBySourceIdxByVariable || {},
-    }),
-    [colorOverrideBySourceIdxByVariable, setColorOverrideBySourceIdxByVariable, setHoveredMarkerMatchersDebounced]
-  );
-
-  return (
-    <ThreeDimensionalVizContext.Provider value={threeDimensionalVizContextValue}>
-      <TopicTreeContext.Provider value={topicTreeData}>
-        <div
-          ref={containerRef}
-          onClick={onControlsOverlayClick}
-          tabIndex={-1}
-          className={styles.container}
-          style={{ cursor: cursorType }}
-          data-test="3dviz-layout">
-          <KeyListener keyDownHandlers={keyDownHandlers} />
-          <PanelToolbarMenu
-            autoTextBackgroundColor={!!autoTextBackgroundColor}
-            checkedKeys={checkedKeys}
-            flattenMarkers={!!flattenMarkers}
-            helpContent={helpContent}
-            saveConfig={saveConfig}
-            settingsByKey={settingsByKey}
-          />
-          <div style={{ position: "absolute", width: "100%", height: "100%" }}>
-            {isDemoMode && DemoModeComponent && <DemoModeComponent />}
-            <div style={{ ...videoRecordingStyle, position: "relative", width: "100%", height: "100%" }}>
-              {(!isDemoMode || (isDemoMode && isHovered)) && (
-                <Dimensions>
-                  {({ width: containerWidth, height: containerHeight }) => (
-                    <TopicTree
-                      allKeys={allKeys}
-                      availableNamespacesByTopic={availableNamespacesByTopic}
-                      checkedKeys={checkedKeys}
-                      containerHeight={containerHeight}
-                      containerWidth={containerWidth}
-                      derivedCustomSettingsByKey={derivedCustomSettingsByKey}
-                      expandedKeys={expandedKeys}
-                      filterText={filterText}
-                      getIsNamespaceCheckedByDefault={getIsNamespaceCheckedByDefault}
-                      getIsTreeNodeVisibleInScene={getIsTreeNodeVisibleInScene}
-                      getIsTreeNodeVisibleInTree={getIsTreeNodeVisibleInTree}
-                      hasFeatureColumn={hasFeatureColumn}
-                      isPlaying={isPlaying}
-                      onExitTopicTreeFocus={onExitTopicTreeFocus}
-                      onNamespaceOverrideColorChange={onNamespaceOverrideColorChange}
-                      pinTopics={pinTopics}
-                      diffModeEnabled={diffModeEnabled}
-                      rootTreeNode={rootTreeNode}
-                      saveConfig={saveConfig}
-                      sceneErrorsByKey={sceneErrorsByKey}
-                      setCurrentEditingTopic={setCurrentEditingTopic}
-                      setEditingNamespace={setEditingNamespace}
-                      setFilterText={setFilterText}
-                      setShowTopicTree={setShowTopicTree}
-                      shouldExpandAllKeys={shouldExpandAllKeys}
-                      showTopicTree={showTopicTree}
-                      topicDisplayMode={topicDisplayMode}
-                      visibleTopicsCountByKey={visibleTopicsCountByKey}
-                    />
-                  )}
-                </Dimensions>
-              )}
-              {currentEditingTopic && (
-                <TopicSettingsModal
-                  currentEditingTopic={currentEditingTopic}
-                  hasFeatureColumn={hasFeatureColumn}
-                  setCurrentEditingTopic={setCurrentEditingTopic}
-                  sceneBuilderMessage={
-                    sceneBuilder.collectors[currentEditingTopic.name] &&
-                    sceneBuilder.collectors[currentEditingTopic.name].getMessages()[0]
-                  }
-                  saveConfig={saveConfig}
-                  settingsByKey={settingsByKey}
-                />
-              )}
-              {editingNamespace && (
-                <RenderToBodyComponent>
-                  <Modal
-                    onRequestClose={() => setEditingNamespace(undefined)}
-                    contentStyle={{
-                      maxHeight: "calc(100vh - 200px)",
-                      maxWidth: 480,
-                      display: "flex",
-                      flexDirection: "column",
-                    }}>
-                    <ColorPickerSettingsPanel
-                      color={settingsByKey[editingNamespace.namespaceKey]?.overrideColor}
-                      onChange={(newColor) => onNamespaceOverrideColorChange(newColor, editingNamespace.namespaceKey)}
-                    />
-                  </Modal>
-                </RenderToBodyComponent>
-              )}
-            </div>
-          </div>
-          <div className={styles.world}>
-            <World
-              key={`${callbackInputsRef.current.autoSyncCameraState ? "synced" : "not-synced"}`}
-              autoTextBackgroundColor={!!autoTextBackgroundColor}
-              cameraState={cameraState}
-              isPlaying={!!isPlaying}
-              isDemoMode={isDemoMode}
-              markerProviders={markerProviders}
-              onCameraStateChange={onCameraStateChange}
-              diffModeEnabled={hasFeatureColumn && diffModeEnabled}
-              onClick={onClick}
-              onDoubleClick={onDoubleClick}
-              onMouseDown={onMouseDown}
-              onMouseMove={onMouseMove}
-              onMouseUp={onMouseUp}
-              searchTextOpen={searchTextOpen}
-              searchText={searchText}
-              setSearchTextMatches={setSearchTextMatches}
-              searchTextMatches={searchTextMatches}
-              selectedMatchIndex={selectedMatchIndex}>
-              {mapElement}
-              {children}
-              <DrawPolygons>{polygonBuilder.polygons}</DrawPolygons>
-              <div style={videoRecordingStyle}>
-                <LayoutToolbar
-                  cameraState={cameraState}
-                  interactionsTabType={interactionsTabType}
-                  setInteractionsTabType={setInteractionsTabType}
-                  debug={debug}
-                  followOrientation={followOrientation}
-                  followTf={followTf}
-                  isPlaying={isPlaying}
-                  measureInfo={measureInfo}
-                  measuringElRef={measuringElRef}
-                  onAlignXYAxis={onAlignXYAxis}
-                  onCameraStateChange={onCameraStateChange}
-                  autoSyncCameraState={!!autoSyncCameraState}
-                  onFollowChange={onFollowChange}
-                  onSetDrawingTabType={setDrawingTabType}
-                  onSetPolygons={onSetPolygons}
-                  onToggleCameraMode={toggleCameraMode}
-                  onToggleDebug={toggleDebug}
-                  polygonBuilder={polygonBuilder}
-                  saveConfig={saveConfig}
-                  selectedObject={selectedObject}
-                  selectedPolygonEditFormat={selectedPolygonEditFormat}
-                  setMeasureInfo={setMeasureInfo}
-                  showCrosshair={showCrosshair}
-                  targetPose={targetPose}
-                  transforms={transforms}
-                  rootTf={rootTf}
-                  isHidden={isHidden}
-                  {...searchTextProps}
-                />
-              </div>
-              {clickedObjects.length > 1 && !selectedObject && (
-                <InteractionContextMenu
-                  clickedPosition={clickedPosition}
-                  clickedObjects={clickedObjects}
-                  selectObject={selectObject}
-                />
-              )}
-              {process.env.NODE_ENV !== "production" && !inScreenshotTests() && debug && <DebugStats />}
-            </World>
+        <div style={{ position: "absolute", width: "100%", height: "100%" }}>
+          {isDemoMode && DemoModeComponent && <DemoModeComponent />}
+          <div style={{ ...videoRecordingStyle, position: "relative", width: "100%", height: "100%" }}>
+            {(!isDemoMode || (isDemoMode && isHovered)) && (
+              <Dimensions>
+                {({ width: containerWidth, height: containerHeight }) => (
+                  <TopicTree
+                    allKeys={allKeys}
+                    availableNamespacesByTopic={availableNamespacesByTopic}
+                    checkedKeys={checkedKeys}
+                    containerHeight={containerHeight}
+                    containerWidth={containerWidth}
+                    derivedCustomSettingsByKey={derivedCustomSettingsByKey}
+                    expandedKeys={expandedKeys}
+                    filterText={filterText}
+                    getIsNamespaceCheckedByDefault={getIsNamespaceCheckedByDefault}
+                    getIsTreeNodeVisibleInScene={getIsTreeNodeVisibleInScene}
+                    getIsTreeNodeVisibleInTree={getIsTreeNodeVisibleInTree}
+                    hasFeatureColumn={hasFeatureColumn}
+                    isPlaying={isPlaying}
+                    onExitTopicTreeFocus={onExitTopicTreeFocus}
+                    onNamespaceOverrideColorChange={onNamespaceOverrideColorChange}
+                    pinTopics={pinTopics}
+                    diffModeEnabled={diffModeEnabled}
+                    rootTreeNode={rootTreeNode}
+                    saveConfig={saveConfig}
+                    sceneErrorsByKey={sceneErrorsByKey}
+                    setCurrentEditingTopic={setCurrentEditingTopic}
+                    setEditingNamespace={setEditingNamespace}
+                    setFilterText={setFilterText}
+                    setShowTopicTree={setShowTopicTree}
+                    shouldExpandAllKeys={shouldExpandAllKeys}
+                    showTopicTree={showTopicTree}
+                    topicDisplayMode={topicDisplayMode}
+                    visibleTopicsCountByKey={visibleTopicsCountByKey}
+                  />
+                )}
+              </Dimensions>
+            )}
+            {currentEditingTopic && (
+              <TopicSettingsModal
+                currentEditingTopic={currentEditingTopic}
+                hasFeatureColumn={hasFeatureColumn}
+                setCurrentEditingTopic={setCurrentEditingTopic}
+                sceneBuilderMessage={
+                  sceneBuilder.collectors[currentEditingTopic.name] &&
+                  sceneBuilder.collectors[currentEditingTopic.name].getMessages()[0]
+                }
+                saveConfig={saveConfig}
+                settingsByKey={settingsByKey}
+              />
+            )}
+            {editingNamespace && (
+              <RenderToBodyComponent>
+                <Modal
+                  onRequestClose={() => setEditingNamespace(undefined)}
+                  contentStyle={{
+                    maxHeight: "calc(100vh - 200px)",
+                    maxWidth: 480,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}>
+                  <ColorPickerSettingsPanel
+                    color={settingsByKey[editingNamespace.namespaceKey]?.overrideColor}
+                    onChange={(newColor) => onNamespaceOverrideColorChange(newColor, editingNamespace.namespaceKey)}
+                  />
+                </Modal>
+              </RenderToBodyComponent>
+            )}
           </div>
         </div>
-      </TopicTreeContext.Provider>
-    </ThreeDimensionalVizContext.Provider>
-  );
+        <div className={styles.world}>
+          <World
+            key={`${callbackInputsRef.current.autoSyncCameraState ? "synced" : "not-synced"}`}
+            autoTextBackgroundColor={!!autoTextBackgroundColor}
+            cameraState={cameraState}
+            isPlaying={!!isPlaying}
+            isDemoMode={isDemoMode}
+            markerProviders={markerProviders}
+            onCameraStateChange={onCameraStateChange}
+            diffModeEnabled={hasFeatureColumn && diffModeEnabled}
+            onClick={onClick}
+            onDoubleClick={onDoubleClick}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            searchTextOpen={searchTextOpen}
+            searchText={searchText}
+            setSearchTextMatches={setSearchTextMatches}
+            searchTextMatches={searchTextMatches}
+            selectedMatchIndex={selectedMatchIndex}>
+            {mapElement}
+            {children}
+            <DrawPolygons>{polygonBuilder.polygons}</DrawPolygons>
+            <div style={videoRecordingStyle}>
+              <LayoutToolbar
+                cameraState={cameraState}
+                interactionsTabType={interactionsTabType}
+                setInteractionsTabType={setInteractionsTabType}
+                debug={debug}
+                followOrientation={followOrientation}
+                followTf={followTf}
+                isPlaying={isPlaying}
+                measureInfo={measureInfo}
+                measuringElRef={measuringElRef}
+                navigationGoalInfo={navigationGoalInfo}
+                navigationGoalElRef={navigationGoalElRef}
+                onAlignXYAxis={onAlignXYAxis}
+                onCameraStateChange={onCameraStateChange}
+                autoSyncCameraState={!!autoSyncCameraState}
+                onFollowChange={onFollowChange}
+                onSetDrawingTabType={setDrawingTabType}
+                onSetPolygons={onSetPolygons}
+                onToggleCameraMode={toggleCameraMode}
+                onToggleDebug={toggleDebug}
+                polygonBuilder={polygonBuilder}
+                saveConfig={saveConfig}
+                selectedObject={selectedObject}
+                selectedPolygonEditFormat={selectedPolygonEditFormat}
+                setMeasureInfo={setMeasureInfo}
+                setNavigationGoalInfo={setNavigationGoalInfo}
+                showCrosshair={showCrosshair}
+                targetPose={targetPose}
+                transforms={transforms}
+                rootTf={rootTf}
+                isHidden={isHidden}
+                {...searchTextProps}
+              />
+            </div>
+            {clickedObjects.length > 1 && !selectedObject && (
+              <InteractionContextMenu
+                clickedPosition={clickedPosition}
+                clickedObjects={clickedObjects}
+                selectObject={selectObject}
+              />
+            )}
+            {process.env.NODE_ENV !== "production" && !inScreenshotTests() && debug && <DebugStats />}
+          </World>
+        </div>
+      </div>
+    </TopicTreeContext.Provider>
+  </ThreeDimensionalVizContext.Provider>
+);
 }

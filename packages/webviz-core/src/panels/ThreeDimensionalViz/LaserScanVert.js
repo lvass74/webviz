@@ -34,7 +34,7 @@ export default `
     gl_Position = projection * view * vec4(p, 1);
     gl_PointSize = pointSize;
 
-    if (range < range_min || range > range_max || intensity == 0.0) {
+    if (range < range_min || range > range_max || intensity < 0.0) {
       gl_PointSize = 0.;
     }
     vColor = isHitmap ? hitmapColor : color;

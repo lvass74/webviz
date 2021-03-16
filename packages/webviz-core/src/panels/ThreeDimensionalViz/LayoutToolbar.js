@@ -15,6 +15,8 @@ import CameraInfo from "webviz-core/src/panels/ThreeDimensionalViz/CameraInfo";
 import Crosshair from "webviz-core/src/panels/ThreeDimensionalViz/Crosshair";
 import DrawingTools, { type DrawingTabType } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools";
 import MeasuringTool, { type MeasureInfo } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools/MeasuringTool";
+import NavigationTools from "webviz-core/src/panels/ThreeDimensionalViz/NavigationTools";
+import NaviagationGoal, { type NavigationGoalInfo } from "webviz-core/src/panels/ThreeDimensionalViz/NavigationTools/NavigationGoal";
 import FollowTFControl from "webviz-core/src/panels/ThreeDimensionalViz/FollowTFControl";
 import Interactions from "webviz-core/src/panels/ThreeDimensionalViz/Interactions";
 import type { TabType } from "webviz-core/src/panels/ThreeDimensionalViz/Interactions/Interactions";
@@ -23,26 +25,30 @@ import MainToolbar from "webviz-core/src/panels/ThreeDimensionalViz/MainToolbar"
 import MeasureMarker from "webviz-core/src/panels/ThreeDimensionalViz/MeasureMarker";
 import SearchText, { type SearchTextProps } from "webviz-core/src/panels/ThreeDimensionalViz/SearchText";
 import { type LayoutToolbarSharedProps } from "webviz-core/src/panels/ThreeDimensionalViz/TopicTree/Layout";
+import NavigationGoal from "./NavigationTools/NavigationGoal";
 
 type Props = {|
   ...LayoutToolbarSharedProps,
   autoSyncCameraState: boolean,
-  debug: boolean,
-  interactionsTabType: ?TabType,
-  measureInfo: MeasureInfo,
-  measuringElRef: { current: ?MeasuringTool },
-  onSetDrawingTabType: (?DrawingTabType) => void,
+    debug: boolean,
+      interactionsTabType: ?TabType,
+        measureInfo: MeasureInfo,
+          measuringElRef: { current: ? MeasuringTool },
+navigationGoalInfo: NavigationGoalInfo,
+  navigationGoalElRef: { current: ? NavigationGoal },
+onSetDrawingTabType: (? DrawingTabType) => void,
   onSetPolygons: (polygons: Polygon[]) => void,
-  onToggleCameraMode: () => void,
-  onToggleDebug: () => void,
-  polygonBuilder: PolygonBuilder,
-  rootTf: ?string,
-  selectedObject: ?MouseEventObject,
-  selectedPolygonEditFormat: "json" | "yaml",
-  setInteractionsTabType: (?TabType) => void,
-  setMeasureInfo: (MeasureInfo) => void,
-  showCrosshair: ?boolean,
-  isHidden: boolean,
+    onToggleCameraMode: () => void,
+      onToggleDebug: () => void,
+        polygonBuilder: PolygonBuilder,
+          rootTf: ?string,
+            selectedObject: ?MouseEventObject,
+              selectedPolygonEditFormat: "json" | "yaml",
+                setInteractionsTabType: (? TabType) => void,
+                  setMeasureInfo: (MeasureInfo) => void,
+                    setNavigationGoalInfo: (NavigationGoalInfo) => void,
+                      showCrosshair: ?boolean,
+                        isHidden: boolean,
   ...SearchTextProps,
 |};
 
@@ -56,6 +62,8 @@ function LayoutToolbar({
   isPlaying,
   measureInfo,
   measuringElRef,
+  navigationGoalInfo,
+  navigationGoalElRef,
   onAlignXYAxis,
   onCameraStateChange,
   onFollowChange,
@@ -75,6 +83,7 @@ function LayoutToolbar({
   selectedPolygonEditFormat,
   setInteractionsTabType,
   setMeasureInfo,
+  setNavigationGoalInfo,
   setSearchText,
   setSearchTextMatches,
   setSelectedMatchIndex,
@@ -100,6 +109,12 @@ function LayoutToolbar({
         measureState={measureInfo.measureState}
         measurePoints={measureInfo.measurePoints}
         onMeasureInfoChange={setMeasureInfo}
+      />
+      <NavigationGoal
+        ref={navigationGoalElRef}
+        state={navigationGoalInfo.state}
+        points={navigationGoalInfo.points}
+        onNavigationGoalInfoChange={setNavigationGoalInfo}
       />
       <div className={cx(styles.toolbar, styles.right)}>
         <div className={styles.buttons}>
@@ -160,6 +175,11 @@ function LayoutToolbar({
           showCrosshair={!!showCrosshair}
           autoSyncCameraState={autoSyncCameraState}
         />
+        <NavigationTools
+          navigationGoal={navigationGoalElRef.current}
+          navigationGoalInfo={navigationGoalInfo}
+          perspective={cameraState.perspective}
+        />
         {additionalToolbarItemsElem}
       </div>
       {!cameraState.perspective && showCrosshair && <Crosshair cameraState={cameraState} />}
@@ -168,4 +188,4 @@ function LayoutToolbar({
   );
 }
 
-export default React.memo<Props>(LayoutToolbar);
+export default React.memo < Props > (LayoutToolbar);

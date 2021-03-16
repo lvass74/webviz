@@ -21,6 +21,7 @@ export function panelsByCategory() {
   const GlobalVariables = require("webviz-core/src/panels/GlobalVariables").default;
   const GlobalVariableSlider = require("webviz-core/src/panels/GlobalVariableSlider").default;
   const ImageViewPanel = require("webviz-core/src/panels/ImageView").default;
+  const ImageStreamViewPanel = require("webviz-core/src/panels/ImageStreamView").default;
   const Internals = require("webviz-core/src/panels/Internals").default;
   const NodePlayground = require("webviz-core/src/panels/NodePlayground").default;
   const Note = require("webviz-core/src/panels/Note").default;
@@ -28,6 +29,7 @@ export function panelsByCategory() {
   const PlaybackPerformance = require("webviz-core/src/panels/PlaybackPerformance").default;
   const Plot = require("webviz-core/src/panels/Plot").default;
   const Publish = require("webviz-core/src/panels/Publish").default;
+  const Teleop = require("webviz-core/src/panels/Teleop").default;
   const RawMessages = require("webviz-core/src/panels/RawMessages").default;
   const Rosout = require("webviz-core/src/panels/Rosout").default;
   const SourceInfo = require("webviz-core/src/panels/SourceInfo").default;
@@ -45,8 +47,10 @@ export function panelsByCategory() {
     { title: `Diagnostics ${ndash} Summary`, component: DiagnosticSummary },
     { title: `Diagnostics ${ndash} Detail`, component: DiagnosticStatusPanel },
     { title: "Image", component: ImageViewPanel },
+    { title: "ImageStream", component: ImageStreamViewPanel },
     { title: "Plot", component: Plot },
     { title: "Publish", component: Publish },
+    { title: "Teleop", component: Teleop },
     { title: "Raw Messages", component: RawMessages },
     { title: "rosout", component: Rosout },
     { title: "State Transitions", component: StateTransitions },
@@ -177,7 +181,7 @@ export function perPanelHooks() {
         "text",
         "triangleList",
       ],
-      renderAdditionalMarkers: () => {},
+      renderAdditionalMarkers: () => { },
       topics: [],
       iconsByDatatype: {
         [VISUALIZATION_MSGS_MARKER_DATATYPE]: HexagonIcon,
@@ -198,7 +202,7 @@ export function perPanelHooks() {
       getMapPalette() {
         return defaultMapPalette;
       },
-      consumePose: () => {},
+      consumePose: () => { },
       ungroupedNodesCategory: "Topics",
       rootTransformFrame: "map",
       defaultFollowTransformFrame: null,
