@@ -97,7 +97,7 @@ export default class NavigationGoal extends React.Component<Props> {
   };
 
   get onMouseMove(): ?(MouseEvent, ReglClickInfo) => void {
-    if (!this.measureActive) {
+    if (!this.active) {
       return null;
     }
 
@@ -105,7 +105,7 @@ export default class NavigationGoal extends React.Component<Props> {
   }
 
   get onMouseUp(): ?(MouseEvent, ReglClickInfo) => void {
-    if (!this.measureActive) {
+    if (!this.active) {
       return null;
     }
 
@@ -113,27 +113,16 @@ export default class NavigationGoal extends React.Component<Props> {
   }
 
   get onMouseDown(): ?(MouseEvent, ReglClickInfo) => void {
-    if (!this.measureActive) {
+    if (!this.active) {
       return null;
     }
 
     return this._canvasMouseDownHandler;
   }
 
-  get measureActive(): boolean {
+  get active(): boolean {
     const { state } = this.props;
     return state === "place-start" || state === "place-finish";
-  }
-
-  get measureDistance(): string {
-    const { start, end } = this.props.points;
-    let dist_string = "";
-    if (start && end) {
-      const dist = Math.hypot(end.x - start.x, end.y - start.y, end.z - start.z);
-      dist_string = `${dist.toFixed(2)}m`;
-    }
-
-    return dist_string;
   }
 
   render() {

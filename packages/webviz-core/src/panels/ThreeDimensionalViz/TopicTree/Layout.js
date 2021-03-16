@@ -468,8 +468,12 @@ export default function Layout({
     // $FlowFixMe get around index signature error
     const measuringHandler = measuringElRef.current && measuringElRef.current[eventName];
     const measureActive = measuringElRef.current && measuringElRef.current.measureActive;
+    const navigationGoalHandler = navigationGoalElRef && navigationGoalElRef.current[eventName];
+    const navigationGoalActive = navigationGoalElRef.current && navigationGoalElRef.current.active;
     if (measuringHandler && measureActive) {
       return measuringHandler(ev, args);
+    } else if (navigationGoalHandler && navigationGoalActive) {
+      return navigationGoalHandler(ev, args);
     } else if (currentDrawingTabType === POLYGON_TAB_TYPE) {
       currentHandleDrawPolygons(eventName, ev, args);
     }

@@ -23,6 +23,7 @@ import type { TabType } from "webviz-core/src/panels/ThreeDimensionalViz/Interac
 import styles from "webviz-core/src/panels/ThreeDimensionalViz/Layout.module.scss";
 import MainToolbar from "webviz-core/src/panels/ThreeDimensionalViz/MainToolbar";
 import MeasureMarker from "webviz-core/src/panels/ThreeDimensionalViz/MeasureMarker";
+import NavigationGoalMarker from "webviz-core/src/panels/ThreeDimensionalViz/NavigationGoalMarker";
 import SearchText, { type SearchTextProps } from "webviz-core/src/panels/ThreeDimensionalViz/SearchText";
 import { type LayoutToolbarSharedProps } from "webviz-core/src/panels/ThreeDimensionalViz/TopicTree/Layout";
 import NavigationGoal from "./NavigationTools/NavigationGoal";
@@ -184,6 +185,7 @@ function LayoutToolbar({
       </div>
       {!cameraState.perspective && showCrosshair && <Crosshair cameraState={cameraState} />}
       <MeasureMarker measurePoints={measureInfo.measurePoints} />
+      <NavigationGoalMarker points={navigationGoalInfo.points} />
     </>
   );
 }
