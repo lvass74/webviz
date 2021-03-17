@@ -681,9 +681,9 @@ return (
           saveConfig={saveConfig}
           settingsByKey={settingsByKey}
         />
-        <div style={{ position: "absolute", zIndex: 99, padding: 10, lineHeight: 2 }}>
-          pose (JSON): {navigationGoalElRef.current && navigationGoalElRef.current.poseAsJson}<br />
-          pose: (YAML): {navigationGoalElRef.current && navigationGoalElRef.current.poseAsYaml}
+        <div style={{ position: "absolute", bottom: 0, left: 0, zIndex: 99, padding: 10, lineHeight: 2, visibility: (debug ? "visible" : "hidden") }}>
+          goal_pose (JSON): {navigationGoalElRef.current && navigationGoalElRef.current.poseAsJson}<br />
+          goal_pose: (YAML): {navigationGoalElRef.current && navigationGoalElRef.current.poseAsYaml}
         </div>
         <div style={{ position: "absolute", width: "100%", height: "100%" }}>
           {isDemoMode && DemoModeComponent && <DemoModeComponent />}

@@ -14,6 +14,8 @@ import type { Point } from "webviz-core/src/types/Messages";
 import { arrayToPoint } from "webviz-core/src/util";
 import { vec3, quat } from "gl-matrix";
 
+import Publisher from "webviz-core/src/components/Publisher";
+
 const UNIT_X_VECTOR = Object.freeze([1, 0, 0]);
 
 export type NavigationGoalState = "idle" | "place-start" | "place-finish";
@@ -32,11 +34,10 @@ type Props = {|
 
 export default class NavigationGoal extends React.Component<Props> {
   mouseDownCoords: number[] = [-1, -1];
+  _publisher = React.createRef < Publisher > ();
 
   toggleState = () => {
-    console.log('toggleState', this.props.state)
     const newState = this.props.state === "idle" ? "place-start" : "idle";
-    console.log('toggleState', newState)
     this.props.onNavigationGoalInfoChange({
       state: newState,
       points: { start: undefined, end: undefined },
@@ -67,6 +68,19 @@ export default class NavigationGoal extends React.Component<Props> {
     } else if (state === "place-finish") {
       // Use setImmediate so there is a tick between resetting the measure state and clicking the 3D canvas.
       // If we call onNavigationGoalInfoChange right away, the clicked object context menu will show up upon finishing measuring.
+
+      if (this._publisher.current) {
+        this._publisher.current.publish({
+          header: {
+            stamp: {
+              sec: 100, // fixme: get clock
+              nanosec: 0
+            },
+            frame_id: "map" //fixme: is this the correct frame id?
+          },
+          pose: this.pose
+        })
+      }
       setImmediate(() => {
         onNavigationGoalInfoChange({ points, state: "idle" });
       });
@@ -164,6 +178,6 @@ export default class NavigationGoal extends React.Component<Props> {
   }
 
   render() {
-    return null;
+    return <Publisher ref={this._publisher} topic="/goal_pose" datatype="geometry_msgs/msg/PoseStamped" name="NavigationGoalPublisher" />
   }
 }
