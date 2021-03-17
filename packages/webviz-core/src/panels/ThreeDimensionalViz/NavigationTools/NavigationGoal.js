@@ -8,10 +8,13 @@
 
 import { isEqual } from "lodash";
 import * as React from "react";
-import { type ReglClickInfo } from "regl-worldview";
+import { type Pose, type ReglClickInfo } from "regl-worldview";
 
 import type { Point } from "webviz-core/src/types/Messages";
 import { arrayToPoint } from "webviz-core/src/util";
+import { vec3, quat } from "gl-matrix";
+
+const UNIT_X_VECTOR = Object.freeze([1, 0, 0]);
 
 export type NavigationGoalState = "idle" | "place-start" | "place-finish";
 
@@ -49,7 +52,6 @@ export default class NavigationGoal extends React.Component<Props> {
 
   _canvasMouseDownHandler = (e: MouseEvent, _clickInfo: ReglClickInfo) => {
     this.mouseDownCoords = [e.clientX, e.clientY];
-    console.log('MouseDown', e.clientX, e.clientY, _clickInfo.ray, arrayToPoint(_clickInfo.ray.planeIntersection([0, 0, 0], [0, 0, 1])))
   };
 
   _canvasMouseUpHandler = (e: MouseEvent, _clickInfo: ReglClickInfo) => {
@@ -123,6 +125,42 @@ export default class NavigationGoal extends React.Component<Props> {
   get active(): boolean {
     const { state } = this.props;
     return state === "place-start" || state === "place-finish";
+  }
+
+
+  get pose(): string {
+    const { start, end } = this.props.points;
+    let dir;
+    if (start && end) {
+      const startPosition = [start.x, start.y, start.z];
+      const endPosition = [end.x, end.y, end.z]
+      dir = vec3.subtract([0, 0, 0], endPosition, startPosition);
+      vec3.normalize(dir, dir);
+      const orientationArr = quat.rotationTo([0, 0, 0, 0], UNIT_X_VECTOR, dir);
+      const orientationKeys = ['x', 'y', 'z', 'w'];
+      const orientation = {};
+      orientationArr.forEach((value, index) => orientation[orientationKeys[index]] = Math.round(value * 100) / 100)
+      return {
+        position: { ...start },
+        orientation
+      };
+
+    }
+    return null;
+  }
+
+  get poseAsJson() {
+    if (!this.pose) return this.pose;
+    return JSON.stringify(this.pose);
+  }
+
+  get poseAsYaml() {
+
+    if (!this.pose) return this.pose;
+    const { position, orientation } = this.pose;
+    return `{ position: { x: ${position.x.toFixed(2)}, y: ${position.y.toFixed(2)}, z: ${position.z.toFixed(2)} },
+    orientation: { x: ${orientation.x.toFixed(2)}, y: ${orientation.y.toFixed(2)}, z: ${orientation.z.toFixed(2)}, w: ${orientation.w.toFixed(2)} }}`
+
   }
 
   render() {

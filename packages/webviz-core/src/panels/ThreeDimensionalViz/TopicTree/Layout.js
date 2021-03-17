@@ -208,9 +208,10 @@ export default function Layout({
   const [hoveredMarkerMatchers, setHoveredMarkerMatchers] = useState < MarkerMatcher[] > ([]);
   const [setHoveredMarkerMatchersDebounced] = useDebouncedCallback(setHoveredMarkerMatchers, 100);
 
-  const isDrawing = useMemo(() => measureInfo.measureState !== "idle" || drawingTabType === POLYGON_TAB_TYPE, [
+  const isDrawing = useMemo(() => measureInfo.measureState !== "idle" || navigationGoalInfo.state !== "idle" || drawingTabType === POLYGON_TAB_TYPE, [
     drawingTabType,
     measureInfo.measureState,
+    navigationGoalInfo.state
   ]);
 
   // initialize the SceneBuilder and TransformsBuilder
@@ -680,6 +681,10 @@ return (
           saveConfig={saveConfig}
           settingsByKey={settingsByKey}
         />
+        <div style={{ position: "absolute", zIndex: 99, padding: 10, lineHeight: 2 }}>
+          pose (JSON): {navigationGoalElRef.current && navigationGoalElRef.current.poseAsJson}<br />
+          pose: (YAML): {navigationGoalElRef.current && navigationGoalElRef.current.poseAsYaml}
+        </div>
         <div style={{ position: "absolute", width: "100%", height: "100%" }}>
           {isDemoMode && DemoModeComponent && <DemoModeComponent />}
           <div style={{ ...videoRecordingStyle, position: "relative", width: "100%", height: "100%" }}>
