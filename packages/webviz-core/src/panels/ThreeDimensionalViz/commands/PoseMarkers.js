@@ -18,6 +18,7 @@ import {
 } from "regl-worldview";
 
 import CarModel from "./CarModel";
+import RobotModel from "./RobotModel";
 import carOutlinePoints from "./CarModel/carOutline.json";
 import { useExperimentalFeature } from "webviz-core/src/components/ExperimentalFeatures";
 import { getGlobalHooks } from "webviz-core/src/loadWebviz";
@@ -55,7 +56,7 @@ const getScaledCarOutlineBufferPoints = (scaling: { x: number, y: number }) => {
   return scaledAndTransformedPoints;
 };
 
-export default React.memo<Props>(function PoseMarkers({ children, layerIndex }: Props): Node[] {
+export default React.memo < Props > (function PoseMarkers({ children, layerIndex }: Props): Node[] {
   const useUpdatedScaling = useExperimentalFeature("updatedPoseErrorScaling");
   const scaledCarOutlineBufferPoints = React.useMemo(
     () => getScaledCarOutlineBufferPoints(useUpdatedScaling ? updatedScaling : originalScaling),
@@ -90,6 +91,14 @@ export default React.memo<Props>(function PoseMarkers({ children, layerIndex }: 
           <CarModel layerIndex={layerIndex} key={i}>
             {{ pose, alpha: settings.alpha || 1, interactionData }}
           </CarModel>
+        );
+        break;
+      }
+      case "robot-model": {
+        models.push(
+          <RobotModel layerIndex={layerIndex} key={i}>
+            {{ pose, alpha: settings.alpha || 1, interactionData }}
+          </RobotModel>
         );
         break;
       }
