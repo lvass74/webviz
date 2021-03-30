@@ -112,7 +112,7 @@ function Teleop({
 }) {
 
   const config = { topicName, datatype, value };
-  const _publisher = React.useRef<Publisher>();
+  const _publisher = React.useRef < Publisher > ();
 
   const defaultVelocity = {
     linear: { x: 0, y: 0, z: 0 },
@@ -130,7 +130,6 @@ function Teleop({
   const topicsMatchingDatatype = topics.filter(t => t.datatype === datatype);
 
   const { datatypeNames, error, activated, velocity } = state;
-  console.log('velocity from state', velocity.linear, velocity.angular)
   const canPublish = capabilities.includes(PlayerCapabilities.advertise);
 
   const _onChangeTopic = (event, topicName: string) => {
@@ -158,16 +157,11 @@ function Teleop({
   };
 
   const navigationKeysListener = (event) => {
-    console.log('teleop key', event);
     const action = NavigationKeyMap.get(event.code)
     if (action) {
-      console.log('velocity', velocity.linear, velocity.angular);
       const newVelocity = action(velocity);
-      console.log('newVelocity', newVelocity.linear, newVelocity.angular);
       setState(state => {
-        console.log('setState current velocity', state.velocity.linear, state.velocity.angular);
         const newState = { ...state, velocity: newVelocity };
-        console.log('setState new velocity', newState.velocity.linear, newState.velocity.angular);
         return newState;
       })
       _publish(newVelocity);
@@ -175,7 +169,6 @@ function Teleop({
   }
 
   const _onFocusLost = (event) => {
-    console.log('on focus lost', event);
     setState(state => ({ ...state, activated: false }));
     stopNavigation();
   }
@@ -246,4 +239,4 @@ function Teleop({
 Teleop.defaultConfig = defaultConfig;
 Teleop.panelType = panelType;
 
-export default hot(Panel<Config>(Teleop));
+export default hot(Panel < Config > (Teleop));
