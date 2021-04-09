@@ -5,64 +5,23 @@
 //  This source code is licensed under the Apache License, Version 2.0,
 //  found in the LICENSE file in the root directory of this source tree.
 //  You may not use this file except in compliance with the License.
-import CheckboxBlankOutlineIcon from "@mdi/svg/svg/checkbox-blank-outline.svg";
-import CheckboxMarkedIcon from "@mdi/svg/svg/checkbox-marked.svg";
+
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable no-shadow */
+
 import * as React from "react";
 import { hot } from "react-hot-loader/root";
 import styled, { css } from "styled-components";
 
-import { PanelToolbarInput, PanelToolbarLabel } from "webviz-core/shared/panelToolbarStyles";
 import Autocomplete from "webviz-core/src/components/Autocomplete";
-import Button from "webviz-core/src/components/Button";
 import Flex from "webviz-core/src/components/Flex";
-import Item from "webviz-core/src/components/Menu/Item";
 import Panel from "webviz-core/src/components/Panel";
 import PanelToolbar from "webviz-core/src/components/PanelToolbar";
 import Publisher from "webviz-core/src/components/Publisher";
-import { PlayerCapabilities, type Topic } from "webviz-core/src/players/types";
-import colors from "webviz-core/src/styles/colors.module.scss";
+import { type Topic } from "webviz-core/src/players/types";
 import type { RosDatatypes } from "webviz-core/src/types/RosDatatypes";
 
-type Config = {|
-  topicName: string,
-    datatype: string,
-|};
-
-type Props = {
-  config: Config,
-  saveConfig: ($Shape<Config>) => void,
-
-  // player state
-  capabilities: string[],
-  topics: Topic[],
-  datatypes: RosDatatypes,
-};
-
-type PanelState = {|
-  cachedProps: $Shape < Props >,
-    datatypeNames: string[],
-      parsedObject: ?any,
-        error: ?string,
-|};
-
-const STextArea = styled.textarea`
-  width: 100%;
-  height: 100%;
-  resize: none;
-`;
-
-const STextAreaContainer = styled.div`
-  flex-grow: 1;
-  padding: 12px 0;
-`;
-
-const SErrorText = styled.div`
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  padding: 4px;
-  color: ${colors.red};
-`;
+// ----------------
 
 const SSpan = styled.span`
   opacity: 0.8;
@@ -77,60 +36,116 @@ const ToggleButton = styled.button`
   background-color: grey;
   color: white;
   margin-right: 1em;
-  ${props => props.activated && css`
-    background-color: green;
-  `}
+  ${(props) =>
+    props.activated &&
+    css`
+      background-color: green;
+    `}
 `;
 
-function getTopicName(topic: Topic): string {
-  return topic.name;
-}
+// ----------------
 
+type Config = {
+  topicName: string,
+  datatype: string,
+  maxVelocity: number,
+  incrementStep: number,
+  publishingRate: number,
+};
 
-const formatVelocityValue = (value) => Math.round(value * 10) / 10
+type Props = {
+  config: Config,
+  saveConfig: ($Shape<Config>) => void,
 
-const defaultConfig = {
-  topicName: "/cmd_vel",
+  // player state
+  capabilities: string[],
+  topics: Topic[],
+  datatypes: RosDatatypes,
+};
+
+const defaultConfig: Config = {
+  topicName: "/cmd_vel_m",
   datatype: "geometry_msgs/Twist",
-  value: "",
+  maxVelocity: 1,
+  incrementStep: 0.1,
+  publishingRate: 2,
 };
 
 const panelType = "Teleop";
 
-const NavigationKeyMap = new Map()
-  .set("KeyW", (velocity => ({ linear: { ...velocity.linear, x: velocity.linear.x + 0.1 }, angular: velocity.angular })))
-  .set("KeyS", (velocity => ({ linear: { ...velocity.linear, x: velocity.linear.x - 0.1 }, angular: velocity.angular })))
-  .set("Space", (velocity => ({ linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } })))
-  .set("KeyA", (velocity => ({ linear: velocity.linear, angular: { ...velocity.angular, z: velocity.angular.z + 0.1 } })))
-  .set("KeyD", (velocity => ({ linear: velocity.linear, angular: { ...velocity.angular, z: velocity.angular.z - 0.1 } })))
+// ----------------
 
-function Teleop({
-  capabilities,
-  topics,
-  config: { topicName, datatype, value },
-  saveConfig
-}) {
+const getTopicName = (topic: Topic): string => topic.name;
 
-  const config = { topicName, datatype, value };
+const formatVelocityValue = (value) => (Math.round(value * 100) / 100).toFixed(2);
+
+const incrementWithMax = (max: number) => (step = 0.1) => (previousValue) =>
+  Math.abs(previousValue + step) <= Math.abs(max) ? previousValue + step : max;
+
+// ----------------
+
+function Teleop({ topics, config, saveConfig }: Props) {
+  const { topicName, datatype } = config;
   const _publisher = React.useRef < Publisher > ();
 
   const defaultVelocity = {
     linear: { x: 0, y: 0, z: 0 },
-    angular: { x: 0, y: 0, z: 0 }
-  }
+    angular: { x: 0, y: 0, z: 0 },
+  };
+
+  const incrementVelocity = incrementWithMax(config.maxVelocity)(config.incrementStep);
+  const decrementVelocity = incrementWithMax(config.maxVelocity * -1)(config.incrementStep * -1);
+
+  const NavigationKeyMap = new Map()
+    .set("KeyW", (velocity) => ({
+      linear: { ...velocity.linear, x: incrementVelocity(velocity.linear.x) },
+      angular: velocity.angular,
+    }))
+    .set("KeyS", (velocity) => ({
+      linear: { ...velocity.linear, x: decrementVelocity(velocity.linear.x) },
+      angular: velocity.angular,
+    }))
+    .set("Space", () => ({ linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } }))
+    .set("KeyA", (velocity) => ({
+      linear: velocity.linear,
+      angular: {
+        ...velocity.angular,
+        z: velocity.linear.x >= 0 ? incrementVelocity(velocity.angular.z) : decrementVelocity(velocity.angular.z),
+      },
+    }))
+    .set("KeyD", (velocity) => ({
+      linear: velocity.linear,
+      angular: {
+        ...velocity.angular,
+        z: velocity.linear.x >= 0 ? decrementVelocity(velocity.angular.z) : incrementVelocity(velocity.angular.z),
+      },
+    }));
 
   const [state, setState] = React.useState({
     cachedProps: {},
     datatypeNames: [],
     error: null,
     activated: false,
-    velocity: defaultVelocity
+    velocity: defaultVelocity,
   });
 
-  const topicsMatchingDatatype = topics.filter(t => t.datatype === datatype);
+  const topicsMatchingDatatype = topics.filter((t) => t.datatype === datatype);
 
-  const { datatypeNames, error, activated, velocity } = state;
-  const canPublish = capabilities.includes(PlayerCapabilities.advertise);
+  const { activated, velocity } = state;
+
+  const _publish = React.useCallback((velocity) => {
+    const { topicName } = config;
+    if(topicName && velocity && _publisher.current) {
+      _publisher.current.publish(velocity);
+    } else {
+      throw new Error(`called _publish() when input was invalid`);
+    }
+  }, [config]);
+
+  const stopNavigation = React.useCallback(() => {
+    setState((state) => ({ ...state, velocity: defaultVelocity }));
+    _publish(defaultVelocity);
+  }, [_publish, defaultVelocity]);
 
   const _onChangeTopic = (event, topicName: string) => {
     saveConfig({ topicName });
@@ -144,72 +159,75 @@ function Teleop({
 
   const _onActivateButtonClick = () => {
     stopNavigation();
-    setState(state => ({ ...state, activated: !activated }));
-  }
-
-  const _publish = (velocity) => {
-    const { topicName } = config;
-    if (topicName && velocity && _publisher.current) {
-      _publisher.current.publish(velocity);
-    } else {
-      throw new Error(`called _publish() when input was invalid`);
-    }
+    setState((state) => ({ ...state, activated: !activated }));
   };
 
-  const navigationKeysListener = (event) => {
-    const action = NavigationKeyMap.get(event.code)
-    if (action) {
+  const navigationKeysListener = React.useCallback((event: KeyboardEvent) => {
+    const action = NavigationKeyMap.get(event.code);
+    if(action) {
       const newVelocity = action(velocity);
-      setState(state => {
+      setState((state) => {
         const newState = { ...state, velocity: newVelocity };
         return newState;
-      })
-      _publish(newVelocity);
+      });
+      _publish(newVelocity, 2);
     }
-  }
+  }, [_publish, velocity]);
 
-  const _onFocusLost = (event) => {
-    setState(state => ({ ...state, activated: false }));
+  const _onFocusLost = React.useCallback(() => {
+    setState((state) => ({ ...state, activated: false }));
     stopNavigation();
-  }
+  }, [stopNavigation]);
 
-  const _onVisibilityChange = (event) => {
-    if (document.visibilityState === 'hidden') _onFocusLost();
-  }
+  const _onVisibilityChange = React.useCallback(() => {
+    if(document.visibilityState === "hidden") {
+      _onFocusLost();
+    }
+  }, [_onFocusLost]);
 
-  const stopNavigation = () => {
-    setState(state => ({ ...state, velocity: defaultVelocity }));
-    _publish(defaultVelocity);
-  }
+  const publishVelocity = React.useCallback(() => {
+    _publish(velocity);
+  }, [_publish, velocity]);
 
   React.useEffect(() => {
-    if (activated) {
+    let timer = null;
+    if(activated) {
       document.addEventListener("keydown", navigationKeysListener);
       window.addEventListener("blur", _onFocusLost);
       document.addEventListener("visibilitychange", _onVisibilityChange);
+      timer = window.setInterval(publishVelocity, 1000 / config.publishingRate);
       return () => {
         document.removeEventListener("keydown", navigationKeysListener);
         window.removeEventListener("blur", _onFocusLost);
         document.removeEventListener("visibilitychange", _onVisibilityChange);
+        window.clearInterval(timer);
       };
     }
-  }, [activated, velocity]);
+  }, [
+    _onFocusLost,
+    _onVisibilityChange,
+    activated,
+    config.publishingRate,
+    navigationKeysListener,
+    publishVelocity,
+    velocity,
+  ]);
 
   const displayVelocity = [
-    state.velocity.linear.x >= 0.1 ? formatVelocityValue(state.velocity.linear.x) : '\u00a0',
-    state.velocity.angular.z <= -0.1 ? formatVelocityValue(state.velocity.angular.z) : '\u00a0',
-    state.velocity.linear.x <= -0.1 ? formatVelocityValue(state.velocity.linear.x) : '\u00a0',
-    state.velocity.angular.z >= 0.1 ? formatVelocityValue(state.velocity.angular.z) : '\u00a0',
+    state.velocity.linear.x >= 0.01 ? formatVelocityValue(state.velocity.linear.x) : "\u00a0",
+    state.velocity.angular.z <= -0.01 ? formatVelocityValue(state.velocity.angular.z) : "\u00a0",
+    state.velocity.linear.x <= -0.01 ? formatVelocityValue(state.velocity.linear.x) : "\u00a0",
+    state.velocity.angular.z >= 0.01 ? formatVelocityValue(state.velocity.angular.z) : "\u00a0",
   ];
 
   return (
     <Flex col style={{ height: "100%", padding: "12px" }}>
-      {topicName && datatype && (
-        <Publisher ref={_publisher} name="Teleop" topic={topicName} datatype={datatype} />
-      )}
+      {topicName && datatype && <Publisher ref={_publisher} name="Teleop" topic={topicName} datatype={datatype} />}
       <PanelToolbar floating />
       <SRow>
-        <ToggleButton activated={activated} onClick={_onActivateButtonClick}>{activated ? 'On' : 'Off'}</ToggleButton>
+        <ToggleButton activated={activated} onClick={_onActivateButtonClick}>
+          {activated ? "On" : "Off"}
+        </ToggleButton>
         <SSpan>Topic:</SSpan>
         <Autocomplete
           placeholder="Choose a topic"
@@ -223,17 +241,47 @@ function Teleop({
         />
       </SRow>
       <Flex>
-        <table style={{ textAlign: 'center' }}>
+        <table style={{ textAlign: "center" }}>
           <tbody>
-            <tr><td></td><td></td><td>{displayVelocity[0]}</td><td></td><td></td></tr>
-            <tr><td></td><td></td><td className="teleopForward">w</td><td></td><td></td></tr>
-            <tr><td>{displayVelocity[3]}</td><td className="teleopTurnLeft">a</td><td className="teleopStop">space</td><td className="teleopTurnRight">d</td><td>{displayVelocity[1]}</td></tr>
-            <tr><td></td><td></td><td className="teleopBackward">s</td><td></td><td></td></tr>
-            <tr><td></td><td></td><td>{displayVelocity[2]}</td><td></td><td></td></tr>
+            <tr>
+              <td />
+              <td />
+              <td>{displayVelocity[0]}</td>
+              <td />
+              <td />
+            </tr>
+            <tr>
+              <td />
+              <td />
+              <td className="teleopForward">w</td>
+              <td />
+              <td />
+            </tr>
+            <tr>
+              <td>{displayVelocity[3]}</td>
+              <td className="teleopTurnLeft">a</td>
+              <td className="teleopStop">space</td>
+              <td className="teleopTurnRight">d</td>
+              <td>{displayVelocity[1]}</td>
+            </tr>
+            <tr>
+              <td />
+              <td />
+              <td className="teleopBackward">s</td>
+              <td />
+              <td />
+            </tr>
+            <tr>
+              <td />
+              <td />
+              <td>{displayVelocity[2]}</td>
+              <td />
+              <td />
+            </tr>
           </tbody>
         </table>
       </Flex>
-    </Flex >
+    </Flex>
   );
 }
 Teleop.defaultConfig = defaultConfig;
