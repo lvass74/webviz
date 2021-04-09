@@ -7,7 +7,6 @@
     "*.mdx": "markdown"
   },
   "editor.codeActionsOnSave": {
-    "source.organizeImports": false,
-    "source.fixAll.eslint": true
+    "source.organizeImports": false
   }
 }

@@ -31,6 +31,7 @@ export function panelsByCategory() {
   const Publish = require("webviz-core/src/panels/Publish").default;
   const Teleop = require("webviz-core/src/panels/Teleop").default;
   const TeleopGamepad = require("webviz-core/src/panels/TeleopGamepad").default;
+  const Dashboard = require("webviz-core/src/panels/Dashboard").default;
   const RawMessages = require("webviz-core/src/panels/RawMessages").default;
   const Rosout = require("webviz-core/src/panels/Rosout").default;
   const SourceInfo = require("webviz-core/src/panels/SourceInfo").default;
@@ -53,6 +54,7 @@ export function panelsByCategory() {
     { title: "Publish", component: Publish },
     { title: "Teleop", component: Teleop },
     { title: "TeleopGamepad", component: TeleopGamepad },
+    { title: "Dashboard", component: Dashboard },
     { title: "Raw Messages", component: RawMessages },
     { title: "rosout", component: Rosout },
     { title: "State Transitions", component: StateTransitions },
