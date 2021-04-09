@@ -87,11 +87,17 @@ const incrementWithMax = (max: number) => (step = 0.1) => (previousValue) =>
 function Teleop({ topics, config, saveConfig }: Props) {
   const { topicName, datatype } = config;
   const _publisher = React.useRef < Publisher > ();
-
   const defaultVelocity = {
     linear: { x: 0, y: 0, z: 0 },
     angular: { x: 0, y: 0, z: 0 },
   };
+  const [state, setState] = React.useState({
+    cachedProps: {},
+    datatypeNames: [],
+    error: null,
+    activated: false,
+    velocity: defaultVelocity,
+  });
 
   const incrementVelocity = incrementWithMax(config.maxVelocity)(config.incrementStep);
   const decrementVelocity = incrementWithMax(config.maxVelocity * -1)(config.incrementStep * -1);
@@ -105,7 +111,7 @@ function Teleop({ topics, config, saveConfig }: Props) {
       linear: { ...velocity.linear, x: decrementVelocity(velocity.linear.x) },
       angular: velocity.angular,
     }))
-    .set("Space", () => ({ linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } }))
+    .set("Space", (_) => ({ linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } }))
     .set("KeyA", (velocity) => ({
       linear: velocity.linear,
       angular: {
@@ -121,17 +127,7 @@ function Teleop({ topics, config, saveConfig }: Props) {
       },
     }));
 
-  const [state, setState] = React.useState({
-    cachedProps: {},
-    datatypeNames: [],
-    error: null,
-    activated: false,
-    velocity: defaultVelocity,
-  });
-
   const topicsMatchingDatatype = topics.filter((t) => t.datatype === datatype);
-
-  const { activated, velocity } = state;
 
   const _publish = React.useCallback((velocity) => {
     const { topicName } = config;
@@ -159,20 +155,19 @@ function Teleop({ topics, config, saveConfig }: Props) {
 
   const _onActivateButtonClick = () => {
     stopNavigation();
-    setState((state) => ({ ...state, activated: !activated }));
+    setState((state) => ({ ...state, activated: !state.activated }));
   };
 
   const navigationKeysListener = React.useCallback((event: KeyboardEvent) => {
     const action = NavigationKeyMap.get(event.code);
     if(action) {
-      const newVelocity = action(velocity);
+      const newVelocity = action(state.velocity);
       setState((state) => {
         const newState = { ...state, velocity: newVelocity };
         return newState;
       });
-      _publish(newVelocity, 2);
     }
-  }, [_publish, velocity]);
+  }, [NavigationKeyMap, state.velocity]);
 
   const _onFocusLost = React.useCallback(() => {
     setState((state) => ({ ...state, activated: false }));
@@ -186,12 +181,12 @@ function Teleop({ topics, config, saveConfig }: Props) {
   }, [_onFocusLost]);
 
   const publishVelocity = React.useCallback(() => {
-    _publish(velocity);
-  }, [_publish, velocity]);
+    _publish(state.velocity);
+  }, [_publish, state.velocity]);
 
   React.useEffect(() => {
     let timer = null;
-    if(activated) {
+    if(state.activated) {
       document.addEventListener("keydown", navigationKeysListener);
       window.addEventListener("blur", _onFocusLost);
       document.addEventListener("visibilitychange", _onVisibilityChange);
@@ -206,11 +201,10 @@ function Teleop({ topics, config, saveConfig }: Props) {
   }, [
     _onFocusLost,
     _onVisibilityChange,
-    activated,
     config.publishingRate,
     navigationKeysListener,
     publishVelocity,
-    velocity,
+    state.activated,
   ]);
 
   const displayVelocity = [
@@ -220,13 +214,14 @@ function Teleop({ topics, config, saveConfig }: Props) {
     state.velocity.angular.z >= 0.01 ? formatVelocityValue(state.velocity.angular.z) : "\u00a0",
   ];
 
+  console.log("Rendering teleop");
   return (
     <Flex col style={{ height: "100%", padding: "12px" }}>
       {topicName && datatype && <Publisher ref={_publisher} name="Teleop" topic={topicName} datatype={datatype} />}
       <PanelToolbar floating />
       <SRow>
-        <ToggleButton activated={activated} onClick={_onActivateButtonClick}>
-          {activated ? "On" : "Off"}
+        <ToggleButton activated={state.activated} onClick={_onActivateButtonClick}>
+          {state.activated ? "On" : "Off"}
         </ToggleButton>
         <SSpan>Topic:</SSpan>
         <Autocomplete
