@@ -23,13 +23,12 @@ const defaultConfig = { topics: ["/scan", "/kinect_camera/image_raw"] };
 
 // const timeDiff = (time1, time2) => Math.round((timeToMsec(time1) - timeToMsec(time2)) * 10 ** 3) / 10 ** 3;
 
-function getArrow(x: number, y: number) {
-  if(Math.abs(x) < 0.01 && Math.abs(y) < 0.01) {
-    // console.log("arrow", x, y);
+function getArrow(x: number, z: number) {
+  if(Math.abs(x) < 0.01 && Math.abs(z) < 0.01) {
     return;
   }
   return (
-    <span style={{ transform: `rotate(${Math.atan2(-x, y)}rad)`, display: "inline-block", fontSize: "3em" }}>→</span>
+    <span style={{ transform: `rotate(${Math.atan2(-x, -z)}rad)`, display: "inline-block", fontSize: "3em" }}>→</span>
   );
 }
 
@@ -57,7 +56,7 @@ function Dashboard({ config }: Props) {
         //Math.round(newMessages[newMessages.length - 1].message.twist.twist.linear.x * 10) / 10,
         [
           newMessages[newMessages.length - 1].message.twist.twist.linear.x,
-          newMessages[newMessages.length - 1].message.twist.twist.linear.y,
+          newMessages[newMessages.length - 1].message.twist.twist.angular.z,
         ],
       []
     ),
@@ -68,6 +67,14 @@ function Dashboard({ config }: Props) {
     return result === 0 ? Number(0).toFixed(1) : result.toFixed(1);
   }, []);
 
+  const obstacle = PanelAPI.useMessageReducer < boolean > ({
+    topics: ["/teleop_status"],
+    restore: React.useCallback((lastState) => (lastState ? lastState : false), []),
+    addMessages: React.useCallback((prevState, newMessages) => {
+      return newMessages.find((m) => m.message.data === "obstacle") ? true : false;
+    }, []),
+  });
+
   return (
     <div style={{ fontSize: "2em" }}>
       <div>current time: {endTime ? endTime : 0}</div>
@@ -75,7 +82,7 @@ function Dashboard({ config }: Props) {
       <div>
         {Array.from(lastMessageTimes.entries()).map(([topic, receiveTime]) => (
           <li key={topic}>
-            {topic}: {receiveTime} >> {endTime - receiveTime}
+            {topic}: {receiveTime} &gt;&gt; {endTime - receiveTime}
           </li>
         ))}
       </div>
@@ -83,6 +90,7 @@ function Dashboard({ config }: Props) {
         speed: {formatSpeedValue(speed[0])}, {formatSpeedValue(speed[1])}
         {getArrow(speed[0], speed[1])}
       </div>
+      <div> obstacle? {obstacle ? "true" : "false"}</div>
     </div>
   );
 }
