@@ -34,7 +34,7 @@ function exportModelToGlb(model) {
 }
 async function _loadRobotModel(robotUrdfModel: any) {
 
-  if (!robotUrdfModel) {
+  if(!robotUrdfModel) {
     throw new Error(`unable to load robot urdf model: ${robotUrdfModel}`);
   }
   const manager = new LoadingManager();
@@ -43,7 +43,6 @@ async function _loadRobotModel(robotUrdfModel: any) {
   const glbModel = await exportModelToGlb(robotModel);
   const model = await parseGLB(glbModel);
   const nodes = [...model.json.nodes];
-  console.log(nodes);
 
   // apply rotation to the root node(s) of the model to overcome orientation difference between urdf and glb (or ROS vs Threejs?)
   const rotationX = [Math.sqrt(0.5), Math.sqrt(0.5), 0, 0];
@@ -92,7 +91,7 @@ export default function RobotModel({
   const messages = useMessagesByTopic({ topics: [topicName], historySize: 1 })[topicName];
   const robotModel = messages[0] ? messages[0].message.data : null;
   const loadRobotModel = useMemo(() => () => _loadRobotModel(robotModel), [robotModel])
-  if (!robotModel) return null;
+  if(!robotModel) return null;
   return (
     <GLTFScene layerIndex={layerIndex} model={loadRobotModel}>
       {{ pose, alpha, scale, interactionData }}
