@@ -8,16 +8,17 @@
 import React, { useCallback } from "react";
 import { hot } from "react-hot-loader/root";
 
+import SpeedOMeter from "./SpeedOMeter";
 import { useMessagePipeline } from "webviz-core/src/components/MessagePipeline";
 import Panel from "webviz-core/src/components/Panel";
 import * as PanelAPI from "webviz-core/src/PanelAPI";
 import type { SaveConfig } from "webviz-core/src/types/panels";
 
-type Config = { topics: string[] };
+type Config = { topics: string[], maxSpeed: number };
 type Props = { config: Config, saveConfig: SaveConfig<Config> };
 
 const panelType = "Dashboard";
-const defaultConfig = { topics: ["/scan", "/kinect_camera/image_raw"] };
+const defaultConfig = { topics: ["/scan", "/kinect_camera/image_raw"], maxSpeed: 1 };
 
 // const timeToMsec = ({ sec, nsec }) => sec + nsec / 10 ** 9;
 
@@ -28,7 +29,7 @@ function getArrow(x: number, z: number) {
     return;
   }
   return (
-    <span style={{ transform: `rotate(${Math.atan2(-x, -z)}rad)`, display: "inline-block", fontSize: "3em" }}>→</span>
+    <span style={{ transform: `rotate(${Math.atan2(-x, -z)}rad)`, display: "inline-block" }}>→</span>
   );
 }
 
@@ -91,6 +92,7 @@ function Dashboard({ config }: Props) {
         {getArrow(speed[0], speed[1])}
       </div>
       <div> obstacle? {obstacle ? "true" : "false"}</div>
+      <SpeedOMeter speed={speed[0]} rotation={speed[1]} maxSpeed={config.maxSpeed} />
     </div>
   );
 }
