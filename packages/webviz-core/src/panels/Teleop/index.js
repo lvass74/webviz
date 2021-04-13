@@ -12,6 +12,7 @@
 import * as React from "react";
 import { hot } from "react-hot-loader/root";
 import styled, { css } from "styled-components";
+import "roslib/build/roslib";
 
 import Autocomplete from "webviz-core/src/components/Autocomplete";
 import Flex from "webviz-core/src/components/Flex";
@@ -20,6 +21,7 @@ import PanelToolbar from "webviz-core/src/components/PanelToolbar";
 import Publisher from "webviz-core/src/components/Publisher";
 import { type Topic } from "webviz-core/src/players/types";
 import type { RosDatatypes } from "webviz-core/src/types/RosDatatypes";
+import { ROSBRIDGE_WEBSOCKET_URL_QUERY_KEY } from "webviz-core/src/util/globalConstants";
 
 // ----------------
 
@@ -73,6 +75,9 @@ const defaultConfig: Config = {
 
 const panelType = "Teleop";
 
+const ROSLIB = window.ROSLIB;
+const params = new URLSearchParams(window.location.search);
+const websocketUrl = params.get(ROSBRIDGE_WEBSOCKET_URL_QUERY_KEY) || "ws://localhost:9090";
 // ----------------
 
 const getTopicName = (topic: Topic): string => topic.name;
@@ -84,7 +89,7 @@ const incrementWithMax = (max: number) => (step = 0.1) => (previousValue) =>
 
 // ----------------
 
-function Teleop({ topics, config, saveConfig }: Props) {
+function Teleop({ topics, config, saveConfig, ...rest }: Props) {
   const { topicName, datatype } = config;
   const _publisher = React.useRef < Publisher > ();
   const defaultVelocity = {
@@ -97,18 +102,74 @@ function Teleop({ topics, config, saveConfig }: Props) {
     error: null,
     activated: false,
     velocity: defaultVelocity,
+    rosClient: null,
+    assisted: true,
   });
 
-  const incrementVelocity = incrementWithMax(config.maxVelocity)(config.incrementStep);
-  const decrementVelocity = incrementWithMax(config.maxVelocity * -1)(config.incrementStep * -1);
+  React.useEffect(() => {
+    if(state.rosClient) return;
+
+    try {
+      // Create a dummy socket. This will throw if there's a SecurityError.
+      const tempSocket = new WebSocket(websocketUrl);
+      tempSocket.binaryType = "arraybuffer";
+      tempSocket.close();
+    } catch(error) {
+      if(error && error.name === "SecurityError") {
+        // const modal = renderToBody(<WssErrorModal onRequestClose={() => modal.remove()} />);
+        return;
+      }
+      console.error("Unknown WebSocket error", error);
+    }
+
+    // `workersocket` will open the actual WebSocket connection in a WebWorker.
+    const rosClient = new ROSLIB.Ros({ url: websocketUrl, transportLibrary: "workersocket" });
+
+    rosClient.on("connection", () => {
+      setState((state) => ({ ...state, rosClient }));
+    });
+
+    rosClient.on("error", (error) => {
+      // TODO(JP): Figure out which kinds of errors we can get here, and which ones we should
+      // actually show to the user.
+      console.warn("WebSocket error", error);
+    });
+
+    rosClient.on("close", () => {
+      setState((state) => ({ ...state, rosClient: null }));
+    });
+  }, [state.rosClient]);
+
+  const teleopAssistanceEnablerService = React.useMemo(
+    () =>
+      state.rosClient
+        ? new ROSLIB.Service({
+          ros: state.rosClient,
+          name: "/enable_assisted_teleop",
+          serviceType: "std_srv/SetBool",
+        })
+        : null,
+    [state.rosClient]
+  );
+  const enableAssistedTeleopRequest = new ROSLIB.ServiceRequest({ data: true });
+  const disableAssistedTeleopRequest = new ROSLIB.ServiceRequest({ data: false });
+
+  // teleopAssistanceEnablerService.callService(request, (result) => {
+  //   console.log(`Result for service call on ${teleopAssistanceEnablerService.name}: ${result.success} / ${result.message}`);
+  // });
+
+  const incrementLinearVelocity = incrementWithMax(config.maxVelocity)(config.incrementStep);
+  const decrementLinearVelocity = incrementWithMax(config.maxVelocity * -1)(config.incrementStep * -1);
+  const incrementAngularVelocity = incrementWithMax(config.maxVelocity * 0.5)(config.incrementStep * 0.5);
+  const decrementAngularVelocity = incrementWithMax(config.maxVelocity * -0.5)(config.incrementStep * -0.5);
 
   const NavigationKeyMap = new Map()
     .set("KeyW", (velocity) => ({
-      linear: { ...velocity.linear, x: incrementVelocity(velocity.linear.x) },
+      linear: { ...velocity.linear, x: incrementLinearVelocity(velocity.linear.x) },
       angular: velocity.angular,
     }))
     .set("KeyS", (velocity) => ({
-      linear: { ...velocity.linear, x: decrementVelocity(velocity.linear.x) },
+      linear: { ...velocity.linear, x: decrementLinearVelocity(velocity.linear.x) },
       angular: velocity.angular,
     }))
     .set("Space", (_) => ({ linear: { x: 0, y: 0, z: 0 }, angular: { x: 0, y: 0, z: 0 } }))
@@ -116,14 +177,20 @@ function Teleop({ topics, config, saveConfig }: Props) {
       linear: velocity.linear,
       angular: {
         ...velocity.angular,
-        z: velocity.linear.x >= 0 ? incrementVelocity(velocity.angular.z) : decrementVelocity(velocity.angular.z),
+        z:
+          velocity.linear.x >= 0
+            ? incrementAngularVelocity(velocity.angular.z)
+            : decrementAngularVelocity(velocity.angular.z),
       },
     }))
     .set("KeyD", (velocity) => ({
       linear: velocity.linear,
       angular: {
         ...velocity.angular,
-        z: velocity.linear.x >= 0 ? decrementVelocity(velocity.angular.z) : incrementVelocity(velocity.angular.z),
+        z:
+          velocity.linear.x >= 0
+            ? decrementAngularVelocity(velocity.angular.z)
+            : incrementAngularVelocity(velocity.angular.z),
       },
     }));
 
@@ -155,7 +222,33 @@ function Teleop({ topics, config, saveConfig }: Props) {
 
   const _onActivateButtonClick = () => {
     stopNavigation();
-    setState((state) => ({ ...state, activated: !state.activated }));
+    if(!state.activated) { // when turning on explicitly set teleop assistance mode
+      teleopAssistanceEnablerService.callService(
+        state.assisted ? enableAssistedTeleopRequest : disableAssistedTeleopRequest,
+        (response) => {
+          console.log("teleopAssistanceEnablerService call response was", response);
+          setState((state) => ({ ...state, activated: !state.activated, assisted: response.success }));
+        }
+      );
+    } else {
+      setState((state) => ({ ...state, activated: !state.activated }));
+    }
+  };
+
+  const _onEnableAssistedModeButtonClick = () => {
+    if(!state.activated) return;
+
+    if(!teleopAssistanceEnablerService) {
+      console.error("teleopAssistanceEnablerService is null");
+      return;
+    }
+    teleopAssistanceEnablerService.callService(
+      state.assisted ? disableAssistedTeleopRequest : enableAssistedTeleopRequest,
+      (response) => {
+        console.log("teleopAssistanceEnablerService call response was", response);
+        setState((state) => ({ ...state, assisted: response.success }));
+      }
+    );
   };
 
   const navigationKeysListener = React.useCallback((event: KeyboardEvent) => {
@@ -222,6 +315,9 @@ function Teleop({ topics, config, saveConfig }: Props) {
       <SRow>
         <ToggleButton activated={state.activated} onClick={_onActivateButtonClick}>
           {state.activated ? "On" : "Off"}
+        </ToggleButton>
+        <ToggleButton activated={state.assisted} onClick={_onEnableAssistedModeButtonClick}>
+          {state.assisted ? "Assisted" : "Not assisted"}
         </ToggleButton>
         <SSpan>Topic:</SSpan>
         <Autocomplete
