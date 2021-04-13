@@ -1,0 +1,20 @@
+.sensor {
+    border: 1px solid gray;
+    display: inline-block;
+    margin: 1em 0 0 1em;
+    padding: 0.5em;
+    font-size: 1em;
+    box-shadow: 1em;
+
+    &.ok {
+        background-color: green;
+    }
+
+    &.unknown {
+        background-color: gray;
+    }
+
+    &.error {
+        background-color: red;
+    }
+}

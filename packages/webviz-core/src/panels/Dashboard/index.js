@@ -8,37 +8,35 @@
 import React, { useCallback } from "react";
 import { hot } from "react-hot-loader/root";
 
+import type { SensorStatus } from "./Sensor";
+import SensorElement from "./Sensor";
 import SpeedOMeter from "./SpeedOMeter";
+import Flex from "webviz-core/src/components/Flex";
 import { useMessagePipeline } from "webviz-core/src/components/MessagePipeline";
 import Panel from "webviz-core/src/components/Panel";
+import PanelToolbar from "webviz-core/src/components/PanelToolbar";
 import * as PanelAPI from "webviz-core/src/PanelAPI";
 import type { SaveConfig } from "webviz-core/src/types/panels";
 
-type Config = { topics: string[], maxSpeed: number };
+type Sensor = { topic: string, errorTimeout: number, label: string };
+type Config = { sensors: Sensor[], maxSpeed: number };
 type Props = { config: Config, saveConfig: SaveConfig<Config> };
 
 const panelType = "Dashboard";
-const defaultConfig = { topics: ["/scan", "/kinect_camera/image_raw"], maxSpeed: 1 };
-
-// const timeToMsec = ({ sec, nsec }) => sec + nsec / 10 ** 9;
-
-// const timeDiff = (time1, time2) => Math.round((timeToMsec(time1) - timeToMsec(time2)) * 10 ** 3) / 10 ** 3;
-
-function getArrow(x: number, z: number) {
-  if(Math.abs(x) < 0.01 && Math.abs(z) < 0.01) {
-    return;
-  }
-  return (
-    <span style={{ transform: `rotate(${Math.atan2(-x, -z)}rad)`, display: "inline-block" }}>→</span>
-  );
-}
+const defaultConfig = {
+  sensors: [
+    { topic: "/scan", errorTimeout: 3, label: "Laserscan" },
+    { topic: "/kinect_camera/image_raw", errorTimeout: 3, label: "Camera" },
+  ],
+  maxSpeed: 1,
+};
 
 function Dashboard({ config }: Props) {
   const endTime = useMessagePipeline(
     useCallback(({ playerState: { activeData } }) => (activeData ? activeData.endTime.sec : undefined), [])
   );
   const lastMessageTimes = PanelAPI.useMessageReducer < Map < string, number>> ({
-    topics: config.topics,
+    topics: config.sensors.map((sensor) => sensor.topic),
     restore: React.useCallback((lastState) => (lastState ? new Map(lastState.entries()) : new Map()), []),
     addMessages: React.useCallback(
       (prevState, newMessages) =>
@@ -63,11 +61,6 @@ function Dashboard({ config }: Props) {
     ),
   });
 
-  const formatSpeedValue = React.useCallback((speedValue) => {
-    const result = Math.round(speedValue * 10) / 10;
-    return result === 0 ? Number(0).toFixed(1) : result.toFixed(1);
-  }, []);
-
   const obstacle = PanelAPI.useMessageReducer < boolean > ({
     topics: ["/teleop_status"],
     restore: React.useCallback((lastState) => (lastState ? lastState : false), []),
@@ -76,24 +69,23 @@ function Dashboard({ config }: Props) {
     }, []),
   });
 
+  const sensors = config.sensors.map((sensor) => {
+    const lastMessageTime = lastMessageTimes.get(sensor.topic);
+    const status: SensorStatus =
+      lastMessageTime && endTime ? (endTime - lastMessageTime <= sensor.errorTimeout ? "OK" : "ERROR") : "UNKNOWN";
+    return <SensorElement key={sensor.topic} label={sensor.label} status={status} />;
+  });
+
   return (
-    <div style={{ fontSize: "2em" }}>
-      <div>current time: {endTime ? endTime : 0}</div>
-      <div>sensor topics: {config.topics.join(",")}</div>
+    <Flex col style={{ height: "100%", padding: "12px" }}>
+      <PanelToolbar floating />
       <div>
-        {Array.from(lastMessageTimes.entries()).map(([topic, receiveTime]) => (
-          <li key={topic}>
-            {topic}: {receiveTime} &gt;&gt; {endTime - receiveTime}
-          </li>
-        ))}
+        {/* <div>current time: {endTime ? endTime : 0}</div> */}
+        <div>{sensors}</div>
+        <div> obstacle? {obstacle ? "true" : "false"}</div>
+        <SpeedOMeter speed={speed[0]} rotation={speed[1]} maxSpeed={config.maxSpeed} />
       </div>
-      <div>
-        speed: {formatSpeedValue(speed[0])}, {formatSpeedValue(speed[1])}
-        {getArrow(speed[0], speed[1])}
-      </div>
-      <div> obstacle? {obstacle ? "true" : "false"}</div>
-      <SpeedOMeter speed={speed[0]} rotation={speed[1]} maxSpeed={config.maxSpeed} />
-    </div>
+    </Flex>
   );
 }
 
