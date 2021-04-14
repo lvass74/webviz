@@ -8,8 +8,8 @@
 import React, { useCallback } from "react";
 import { hot } from "react-hot-loader/root";
 
-import type { SensorStatus } from "./Sensor";
-import SensorElement from "./Sensor";
+import AlarmElement, { type AlarmStatus } from "./Alarm";
+import SensorElement, { type SensorStatus } from "./Sensor";
 import SpeedOMeter from "./SpeedOMeter";
 import Flex from "webviz-core/src/components/Flex";
 import { useMessagePipeline } from "webviz-core/src/components/MessagePipeline";
@@ -19,7 +19,8 @@ import * as PanelAPI from "webviz-core/src/PanelAPI";
 import type { SaveConfig } from "webviz-core/src/types/panels";
 
 type Sensor = { topic: string, errorTimeout: number, label: string };
-type Config = { sensors: Sensor[], maxSpeed: number };
+type Alarm = { label: string, topic: string, predicate: (message: any) => boolean };
+type Config = { sensors: Sensor[], alarms: Alarm[], maxSpeed: number };
 type Props = { config: Config, saveConfig: SaveConfig<Config> };
 
 const panelType = "Dashboard";
@@ -27,6 +28,11 @@ const defaultConfig = {
   sensors: [
     { topic: "/scan", errorTimeout: 3, label: "Laserscan" },
     { topic: "/kinect_camera/image_raw", errorTimeout: 3, label: "Camera" },
+    { topic: "/cmd_vel_m", errorTimeout: 3, label: "Velocity command" },
+  ],
+  alarms: [
+    { label: "Obstacle", topic: "/teleop_status", predicate: (message) => message.data === "obstacle" },
+    { label: "FooBar", topic: "/foo", predicate: (message) => message.data === "bar" },
   ],
   maxSpeed: 1,
 };
@@ -35,17 +41,6 @@ function Dashboard({ config }: Props) {
   const endTime = useMessagePipeline(
     useCallback(({ playerState: { activeData } }) => (activeData ? activeData.endTime.sec : undefined), [])
   );
-  const lastMessageTimes = PanelAPI.useMessageReducer < Map < string, number>> ({
-    topics: config.sensors.map((sensor) => sensor.topic),
-    restore: React.useCallback((lastState) => (lastState ? new Map(lastState.entries()) : new Map()), []),
-    addMessages: React.useCallback(
-      (prevState, newMessages) =>
-        newMessages.reduce((acc, curr) => {
-          return acc.set(curr.topic, curr.receiveTime.sec);
-        }, new Map(prevState.entries())),
-      []
-    ),
-  });
 
   const speed = PanelAPI.useMessageReducer < number[] > ({
     topics: ["/odom"],
@@ -61,19 +56,43 @@ function Dashboard({ config }: Props) {
     ),
   });
 
-  const obstacle = PanelAPI.useMessageReducer < boolean > ({
-    topics: ["/teleop_status"],
-    restore: React.useCallback((lastState) => (lastState ? lastState : false), []),
-    addMessages: React.useCallback((prevState, newMessages) => {
-      return newMessages.find((m) => m.message.data === "obstacle") ? true : false;
-    }, []),
+  const sensorLastMessageTimes = PanelAPI.useMessageReducer < Map < string, number>> ({
+    topics: config.sensors.map((sensor) => sensor.topic),
+    restore: React.useCallback((lastState) => (lastState ? new Map(lastState.entries()) : new Map()), []),
+    addMessages: React.useCallback(
+      (prevState, newMessages) =>
+        newMessages.reduce((acc, curr) => {
+          return acc.set(curr.topic, curr.receiveTime.sec);
+        }, new Map(prevState.entries())),
+      []
+    ),
+  });
+
+  const alarmStates = PanelAPI.useMessageReducer < Map < string, boolean>> ({
+    topics: config.alarms.map((alarm) => alarm.topic),
+    restore: React.useCallback((lastState) => (lastState ? new Map(lastState.entries()) : new Map()), []),
+    addMessages: React.useCallback(
+      (prevState, newMessages) =>
+        newMessages.reduce((acc, curr) => {
+          const alarm = config.alarms.find((a) => a.topic === curr.topic);
+          if(!alarm) return acc;
+          return acc.set(curr.topic, alarm.predicate(curr.message));
+        }, new Map(prevState.entries())),
+      [config.alarms]
+    ),
   });
 
   const sensors = config.sensors.map((sensor) => {
-    const lastMessageTime = lastMessageTimes.get(sensor.topic);
+    const lastMessageTime = sensorLastMessageTimes.get(sensor.topic);
     const status: SensorStatus =
       lastMessageTime && endTime ? (endTime - lastMessageTime <= sensor.errorTimeout ? "OK" : "ERROR") : "UNKNOWN";
-    return <SensorElement key={sensor.topic} label={sensor.label} status={status} />;
+    return <SensorElement key={sensor.topic} topic={sensor.topic} label={sensor.label} status={status} />;
+  });
+
+  const alarms = config.alarms.map((alarm) => {
+    const alarmState = alarmStates.get(alarm.topic);
+    const status: AlarmStatus = alarmState === true ? "ALERT" : alarmState === false ? "OK" : "UNKNOWN";
+    return <AlarmElement key={alarm.topic} topic={alarm.topic} label={alarm.label} status={status} />;
   });
 
   return (
@@ -82,7 +101,7 @@ function Dashboard({ config }: Props) {
       <div>
         {/* <div>current time: {endTime ? endTime : 0}</div> */}
         <div>{sensors}</div>
-        <div> obstacle? {obstacle ? "true" : "false"}</div>
+        <div>{alarms}</div>
         <SpeedOMeter speed={speed[0]} rotation={speed[1]} maxSpeed={config.maxSpeed} />
       </div>
     </Flex>
