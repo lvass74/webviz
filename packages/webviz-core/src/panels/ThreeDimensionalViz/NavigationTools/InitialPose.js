@@ -17,34 +17,34 @@ import { arrayToPoint } from "webviz-core/src/util";
 
 const UNIT_X_VECTOR = Object.freeze([1, 0, 0]);
 
-export type NavigationGoalState = "idle" | "place-start" | "place-finish";
+export type InitialPoseState = "idle" | "place-start" | "place-finish";
 
-export type NavigationGoalInfo = {|
-  state: NavigationGoalState,
+export type InitialPoseInfo = {|
+  state: InitialPoseState,
     points: { start: ? Point, end: ?Point },
 |};
 
 type Props = {|
-  onNavigationGoalInfoChange: (NavigationGoalInfo) => void,
-  ...NavigationGoalInfo,
+  onInitialPoseInfoChange: (InitialPoseInfo) => void,
+  ...InitialPoseInfo,
 |};
 
 /* eslint-disable no-restricted-syntax */
 
-export default class NavigationGoal extends React.Component<Props> {
+export default class InitialPose extends React.Component<Props> {
   mouseDownCoords: number[] = [-1, -1];
   _publisher = React.createRef < Publisher > ();
 
   toggleState = () => {
     const newState = this.props.state === "idle" ? "place-start" : "idle";
-    this.props.onNavigationGoalInfoChange({
+    this.props.onInitialPoseInfoChange({
       state: newState,
       points: { start: undefined, end: undefined },
     });
   };
 
   reset = () => {
-    this.props.onNavigationGoalInfoChange({
+    this.props.onInitialPoseInfoChange({
       state: "idle",
       points: { start: undefined, end: undefined },
     });
@@ -56,14 +56,14 @@ export default class NavigationGoal extends React.Component<Props> {
 
   _canvasMouseUpHandler = (e: MouseEvent, _clickInfo: ReglClickInfo) => {
     const mouseUpCoords = [e.clientX, e.clientY];
-    const { state, points, onNavigationGoalInfoChange } = this.props;
+    const { state, points, onInitialPoseInfoChange } = this.props;
 
     if(!isEqual(mouseUpCoords, this.mouseDownCoords)) {
       return;
     }
 
     if(state === "place-start") {
-      onNavigationGoalInfoChange({ state: "place-finish", points });
+      onInitialPoseInfoChange({ state: "place-finish", points });
     } else if(state === "place-finish") {
       // Use setImmediate so there is a tick between resetting the measure state and clicking the 3D canvas.
       // If we call onNavigationGoalInfoChange right away, the clicked object context menu will show up upon finishing measuring.
@@ -77,20 +77,30 @@ export default class NavigationGoal extends React.Component<Props> {
             },
             frame_id: "map", //fixme: is this the correct frame id?
           },
-          pose: this.pose,
+          pose: {
+            pose: this.pose,
+            covariance: [
+              0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0, 0,
+            ],
+          }
         });
       }
       setImmediate(() => {
-        onNavigationGoalInfoChange({ points, state: "idle" });
+        onInitialPoseInfoChange({ points, state: "idle" });
       });
     }
   };
 
   _canvasMouseMoveHandler = (e: MouseEvent, clickInfo: ReglClickInfo) => {
-    const { state, points, onNavigationGoalInfoChange } = this.props;
+    const { state, points, onInitialPoseInfoChange } = this.props;
     switch(state) {
       case "place-start":
-        onNavigationGoalInfoChange({
+        onInitialPoseInfoChange({
           state,
           points: {
             start: arrayToPoint(clickInfo.ray.planeIntersection([0, 0, 0], [0, 0, 1])),
@@ -100,7 +110,7 @@ export default class NavigationGoal extends React.Component<Props> {
         break;
 
       case "place-finish":
-        onNavigationGoalInfoChange({
+        onInitialPoseInfoChange({
           state,
           points: {
             ...points,
@@ -182,9 +192,9 @@ export default class NavigationGoal extends React.Component<Props> {
     return (
       <Publisher
         ref={this._publisher}
-        topic="/goal_pose"
-        datatype="geometry_msgs/msg/PoseStamped"
-        name="NavigationGoalPublisher"
+        topic="/initialpose"
+        datatype="geometry_msgs/msg/PoseWithCovarianceStamped"
+        name="InitialPosePublisher"
       />
     );
   }

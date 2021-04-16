@@ -15,8 +15,8 @@ type Props = {
   points: { start: ?Point, end: ?Point },
 };
 
-const defaultColor: any = Object.freeze({ r: 0, g: 1, b: 0, a: 1 });
+const defaultColor: any = Object.freeze({ r: 0, g: 0.5, b: 0, a: 1 });
 
-export default function NavigationGoalMarker({ points: { start, end } }: Props) {
-  return <PoseMarker points={{ start, end }} color={defaultColor} labelPrefix="navigation_goal" />;
+export default function InitialPoseMarker({ points: { start, end } }: Props) {
+  return <PoseMarker points={{ start, end }} color={defaultColor} labelPrefix="initial_pose" />;
 }

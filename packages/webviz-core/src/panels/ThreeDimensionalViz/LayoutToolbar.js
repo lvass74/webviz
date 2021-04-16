@@ -10,23 +10,24 @@ import cx from "classnames";
 import React, { useMemo } from "react";
 import { PolygonBuilder, type MouseEventObject, type Polygon } from "regl-worldview";
 
+import InitialPose, { type InitialPoseInfo } from "./NavigationTools/InitialPose";
+import NavigationGoal, { type NavigationGoalInfo } from "./NavigationTools/NavigationGoal";
 import { getGlobalHooks } from "webviz-core/src/loadWebviz";
 import CameraInfo from "webviz-core/src/panels/ThreeDimensionalViz/CameraInfo";
 import Crosshair from "webviz-core/src/panels/ThreeDimensionalViz/Crosshair";
 import DrawingTools, { type DrawingTabType } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools";
 import MeasuringTool, { type MeasureInfo } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools/MeasuringTool";
-import NavigationTools from "webviz-core/src/panels/ThreeDimensionalViz/NavigationTools";
-import NaviagationGoal, { type NavigationGoalInfo } from "webviz-core/src/panels/ThreeDimensionalViz/NavigationTools/NavigationGoal";
 import FollowTFControl from "webviz-core/src/panels/ThreeDimensionalViz/FollowTFControl";
+import InitialPoseMarker from "webviz-core/src/panels/ThreeDimensionalViz/InitialPoseMarker";
 import Interactions from "webviz-core/src/panels/ThreeDimensionalViz/Interactions";
 import type { TabType } from "webviz-core/src/panels/ThreeDimensionalViz/Interactions/Interactions";
 import styles from "webviz-core/src/panels/ThreeDimensionalViz/Layout.module.scss";
 import MainToolbar from "webviz-core/src/panels/ThreeDimensionalViz/MainToolbar";
 import MeasureMarker from "webviz-core/src/panels/ThreeDimensionalViz/MeasureMarker";
 import NavigationGoalMarker from "webviz-core/src/panels/ThreeDimensionalViz/NavigationGoalMarker";
+import NavigationTools from "webviz-core/src/panels/ThreeDimensionalViz/NavigationTools";
 import SearchText, { type SearchTextProps } from "webviz-core/src/panels/ThreeDimensionalViz/SearchText";
 import { type LayoutToolbarSharedProps } from "webviz-core/src/panels/ThreeDimensionalViz/TopicTree/Layout";
-import NavigationGoal from "./NavigationTools/NavigationGoal";
 
 type Props = {|
   ...LayoutToolbarSharedProps,
@@ -35,6 +36,8 @@ type Props = {|
       interactionsTabType: ?TabType,
         measureInfo: MeasureInfo,
           measuringElRef: { current: ? MeasuringTool },
+initialPoseInfo: InitialPoseInfo,
+  initialPoseElRef: { current: ? InitialPose },
 navigationGoalInfo: NavigationGoalInfo,
   navigationGoalElRef: { current: ? NavigationGoal },
 onSetDrawingTabType: (? DrawingTabType) => void,
@@ -47,9 +50,10 @@ onSetDrawingTabType: (? DrawingTabType) => void,
               selectedPolygonEditFormat: "json" | "yaml",
                 setInteractionsTabType: (? TabType) => void,
                   setMeasureInfo: (MeasureInfo) => void,
-                    setNavigationGoalInfo: (NavigationGoalInfo) => void,
-                      showCrosshair: ?boolean,
-                        isHidden: boolean,
+                    setInitialPoseInfo: (InitialPoseInfo) => void,
+                      setNavigationGoalInfo: (NavigationGoalInfo) => void,
+                        showCrosshair: ?boolean,
+                          isHidden: boolean,
   ...SearchTextProps,
 |};
 
@@ -63,6 +67,8 @@ function LayoutToolbar({
   isPlaying,
   measureInfo,
   measuringElRef,
+  initialPoseInfo,
+  initialPoseElRef,
   navigationGoalInfo,
   navigationGoalElRef,
   onAlignXYAxis,
@@ -84,6 +90,7 @@ function LayoutToolbar({
   selectedPolygonEditFormat,
   setInteractionsTabType,
   setMeasureInfo,
+  setInitialPoseInfo,
   setNavigationGoalInfo,
   setSearchText,
   setSearchTextMatches,
@@ -110,6 +117,12 @@ function LayoutToolbar({
         measureState={measureInfo.measureState}
         measurePoints={measureInfo.measurePoints}
         onMeasureInfoChange={setMeasureInfo}
+      />
+      <InitialPose
+        ref={initialPoseElRef}
+        state={initialPoseInfo.state}
+        points={initialPoseInfo.points}
+        onInitialPoseInfoChange={setInitialPoseInfo}
       />
       <NavigationGoal
         ref={navigationGoalElRef}
@@ -177,6 +190,8 @@ function LayoutToolbar({
           autoSyncCameraState={autoSyncCameraState}
         />
         <NavigationTools
+          initialPose={initialPoseElRef.current}
+          initialPoseInfo={initialPoseInfo}
           navigationGoal={navigationGoalElRef.current}
           navigationGoalInfo={navigationGoalInfo}
           perspective={cameraState.perspective}
@@ -185,6 +200,7 @@ function LayoutToolbar({
       </div>
       {!cameraState.perspective && showCrosshair && <Crosshair cameraState={cameraState} />}
       <MeasureMarker measurePoints={measureInfo.measurePoints} />
+      <InitialPoseMarker points={initialPoseInfo.points} />
       <NavigationGoalMarker points={navigationGoalInfo.points} />
     </>
   );

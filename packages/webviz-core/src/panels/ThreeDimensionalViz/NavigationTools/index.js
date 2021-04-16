@@ -6,32 +6,33 @@
 //  found in the LICENSE file in the root directory of this source tree.
 //  You may not use this file except in compliance with the License.
 
-import NavigationGoalIcon from "@mdi/svg/svg/arrow-collapse-right.svg";
 import InitialPoseIcon from "@mdi/svg/svg/arrow-collapse-down.svg";
+import NavigationGoalIcon from "@mdi/svg/svg/arrow-collapse-right.svg";
 import * as React from "react";
 
+import InitialPose, { type InitialPoseInfo } from "./InitialPose";
+import NavigationGoal, { type NavigationGoalInfo } from "./NavigationGoal";
 import Button from "webviz-core/src/components/Button";
 import Icon from "webviz-core/src/components/Icon";
-import MeasuringTool, { type MeasureInfo } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools/MeasuringTool";
 import styles from "webviz-core/src/panels/ThreeDimensionalViz/Layout.module.scss";
 import colors from "webviz-core/src/styles/colors.module.scss";
-import NavigationGoal, { type NavigationGoalInfo } from "./NavigationGoal";
 
 type Props = {
+  initialPose: ?InitialPose,
+  initialPoseInfo: InitialPoseInfo,
   navigationGoal: ?NavigationGoal,
   navigationGoalInfo: NavigationGoalInfo,
   perspective: boolean,
 };
 
 function NavigationTools({
+  initialPose,
+  initialPoseInfo: { state: initialPoseState },
   navigationGoal,
   navigationGoalInfo: { state },
   perspective = false,
 }: Props) {
-  //FIXME: implement initial pose marker
-  const initialPoseMarker = null;
-  const initialPoseMarkerActive = false;
-
+  const initialPoseActive = initialPoseState === "place-start" || initialPoseState === "place-finish";
   const navigationGoalActive = state === "place-start" || state === "place-finish";
   return (
     <div className={styles.buttons}>
@@ -40,14 +41,14 @@ function NavigationTools({
         tooltip={
           perspective
             ? "Switch to 2D Camera to set initial pose"
-            : initialPoseMarkerActive
+            : initialPoseActive
               ? "Cancel initial pose marker"
               : "Set initial pose marker"
         }
-        onClick={initialPoseMarker ? initialPoseMarker.toggleState : undefined}>
+        onClick={initialPose ? initialPose.toggleState : undefined}>
         <Icon
           style={{
-            color: initialPoseMarkerActive ? colors.accent : perspective ? undefined : "white",
+            color: initialPoseActive ? colors.accent : perspective ? undefined : "white",
           }}>
           <InitialPoseIcon />
         </Icon>

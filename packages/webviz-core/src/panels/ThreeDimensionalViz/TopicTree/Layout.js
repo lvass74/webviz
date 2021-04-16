@@ -35,6 +35,7 @@ import { type Save3DConfig, type ThreeDimensionalVizConfig } from "webviz-core/s
 import DebugStats from "webviz-core/src/panels/ThreeDimensionalViz/DebugStats";
 import { POLYGON_TAB_TYPE, type DrawingTabType } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools";
 import MeasuringTool, { type MeasureInfo } from "webviz-core/src/panels/ThreeDimensionalViz/DrawingTools/MeasuringTool";
+import InitialPose, { type InitialPoseInfo } from "webviz-core/src/panels/ThreeDimensionalViz/NavigationTools/InitialPose";
 import NavigationGoal, { type NavigationGoalInfo } from "webviz-core/src/panels/ThreeDimensionalViz/NavigationTools/NavigationGoal";
 import { InteractionContextMenu, OBJECT_TAB_TYPE } from "webviz-core/src/panels/ThreeDimensionalViz/Interactions";
 import useLinkedGlobalVariables from "webviz-core/src/panels/ThreeDimensionalViz/Interactions/useLinkedGlobalVariables";
@@ -177,6 +178,10 @@ export default function Layout({
     measureState: "idle",
     measurePoints: { start: undefined, end: undefined },
   });
+  const [initialPoseInfo, setInitialPoseInfo] = useState < InitialPoseInfo > ({
+    state: "idle",
+    points: { start: undefined, end: undefined },
+  });
   const [navigationGoalInfo, setNavigationGoalInfo] = useState < NavigationGoalInfo > ({
     state: "idle",
     points: { start: undefined, end: undefined },
@@ -192,6 +197,7 @@ export default function Layout({
   // used for updating DrawPolygon during mouse move and scenebuilder namespace change.
   const [_, forceUpdate] = useReducer((x) => x + 1, 0);
   const measuringElRef = useRef <? MeasuringTool > (null);
+  const initialPoseElRef = useRef <? InitialPose > (null);
   const navigationGoalElRef = useRef <? NavigationGoal > (null);
   const [drawingTabType, setDrawingTabType] = useState <? DrawingTabType > (undefined);
   const [interactionsTabType, setInteractionsTabType] = useState <? DrawingTabType > (undefined);
@@ -208,11 +214,14 @@ export default function Layout({
   const [hoveredMarkerMatchers, setHoveredMarkerMatchers] = useState < MarkerMatcher[] > ([]);
   const [setHoveredMarkerMatchersDebounced] = useDebouncedCallback(setHoveredMarkerMatchers, 100);
 
-  const isDrawing = useMemo(() => measureInfo.measureState !== "idle" || navigationGoalInfo.state !== "idle" || drawingTabType === POLYGON_TAB_TYPE, [
-    drawingTabType,
-    measureInfo.measureState,
-    navigationGoalInfo.state
-  ]);
+  const isDrawing = useMemo(
+    () =>
+      measureInfo.measureState !== "idle" ||
+      navigationGoalInfo.state !== "idle" ||
+      initialPoseInfo.state !== "idle" ||
+      drawingTabType === POLYGON_TAB_TYPE,
+    [drawingTabType, measureInfo.measureState, navigationGoalInfo.state, initialPoseInfo.state]
+  );
 
   // initialize the SceneBuilder and TransformsBuilder
   const { sceneBuilder, transformsBuilder } = useMemo(
@@ -309,14 +318,14 @@ export default function Layout({
 
   // If a user selects a marker or hovers over a TopicPicker row, highlight relevant markers
   const highlightMarkerMatchers = useMemo(() => {
-    if (isDrawing) {
+    if(isDrawing) {
       return [];
     }
-    if (hoveredMarkerMatchers.length > 0) {
+    if(hoveredMarkerMatchers.length > 0) {
       return hoveredMarkerMatchers;
     }
     // Highlight the selected object if the interactionsTab popout is open
-    if (selectedObject && !!interactionsTabType) {
+    if(selectedObject && !!interactionsTabType) {
       const marker = getObject(selectedObject);
       const topic = getInteractionData(selectedObject)?.topic;
       return marker && topic
@@ -377,10 +386,10 @@ export default function Layout({
 
   useMemo(() => {
     // TODO(Audrey): add tests for the clearing behavior
-    if (cleared) {
+    if(cleared) {
       sceneBuilder.clear();
     }
-    if (!frame || !rootTf) {
+    if(!frame || !rootTf) {
       return;
     }
     // Toggle scene builder topics based on visible topic nodes in the tree
@@ -459,7 +468,7 @@ export default function Layout({
   }, []);
 
   const handleEvent = useCallback((eventName: EventName, ev: MouseEvent, args: ?ReglClickInfo) => {
-    if (!args) {
+    if(!args) {
       return;
     }
     const {
@@ -469,21 +478,25 @@ export default function Layout({
     // $FlowFixMe get around index signature error
     const measuringHandler = measuringElRef.current && measuringElRef.current[eventName];
     const measureActive = measuringElRef.current && measuringElRef.current.measureActive;
+    const initialPoseHandler = initialPoseElRef && initialPoseElRef.current[eventName];
+    const initialPoseActive = initialPoseElRef.current && initialPoseElRef.current.active;
     const navigationGoalHandler = navigationGoalElRef && navigationGoalElRef.current[eventName];
     const navigationGoalActive = navigationGoalElRef.current && navigationGoalElRef.current.active;
-    if (measuringHandler && measureActive) {
+    if(measuringHandler && measureActive) {
       return measuringHandler(ev, args);
-    } else if (navigationGoalHandler && navigationGoalActive) {
+    } else if(initialPoseHandler && initialPoseActive) {
+      return initialPoseHandler(ev, args);
+    } else if(navigationGoalHandler && navigationGoalActive) {
       return navigationGoalHandler(ev, args);
-    } else if (currentDrawingTabType === POLYGON_TAB_TYPE) {
+    } else if(currentDrawingTabType === POLYGON_TAB_TYPE) {
       currentHandleDrawPolygons(eventName, ev, args);
     }
   }, []);
 
   const updateGlobalVariablesFromSelection = useCallback((newSelectedObject: MouseEventObject) => {
-    if (newSelectedObject) {
+    if(newSelectedObject) {
       const newGlobalVariables = getUpdatedGlobalVariablesBySelectedObject(newSelectedObject, linkedGlobalVariables);
-      if (newGlobalVariables) {
+      if(newGlobalVariables) {
         setGlobalVariables(newGlobalVariables);
       }
     }
@@ -492,7 +505,7 @@ export default function Layout({
   // Auto open/close the tab when the selectedObject changes as long as
   // we aren't drawing or the disableAutoOpenClickedObject setting is enabled.
   const updateInteractionsTabVisibility = useCallback((newSelectedObject: ?MouseEventObject) => {
-    if (!isDrawing) {
+    if(!isDrawing) {
       const shouldBeOpen = newSelectedObject && !disableAutoOpenClickedObject;
       setInteractionsTabType(shouldBeOpen ? OBJECT_TAB_TYPE : null);
     }
@@ -519,7 +532,7 @@ export default function Layout({
     return {
       onClick: (ev: MouseEvent, args: ?ReglClickInfo) => {
         // Don't set any clicked objects when measuring distance or drawing polygons.
-        if (callbackInputsRef.current.isDrawing) {
+        if(callbackInputsRef.current.isDrawing) {
           return;
         }
         const newClickedObjects = (args && args.objects) || [];
@@ -535,18 +548,18 @@ export default function Layout({
         selectObject(newSelectedObject);
       },
       onControlsOverlayClick: (ev: SyntheticMouseEvent<HTMLDivElement>) => {
-        if (!containerRef.current) {
+        if(!containerRef.current) {
           return;
         }
         const target = ((ev.target: any): HTMLElement);
   // Only close if the click target is inside the panel, e.g. don't close when dropdown menus rendered in portals are clicked
-  if (containerRef.current.contains(target)) {
+  if(containerRef.current.contains(target)) {
     setShowTopicTree(false);
   }
 },
 onDoubleClick: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onDoubleClick", ev, args),
   onExitTopicTreeFocus: () => {
-    if (containerRef.current) {
+    if(containerRef.current) {
       containerRef.current.focus();
     }
   },
@@ -559,12 +572,12 @@ onDoubleClick: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onDoubleCl
                 const { cameraState: currentCameraState, saveConfig: currentSaveConfig } = callbackInputsRef.current;
                 const newPerspective = !currentCameraState.perspective;
                 currentSaveConfig({ cameraState: { ...currentCameraState, perspective: newPerspective } });
-                if (measuringElRef.current && currentCameraState.perspective) {
+                if(measuringElRef.current && currentCameraState.perspective) {
                   measuringElRef.current.reset();
                 }
                 // Automatically enable/disable map height based on 3D/2D mode
                 const mapHeightEnabled = (selectedNamespacesByTopic["/metadata"] || []).includes("height");
-                if (mapHeightEnabled !== newPerspective) {
+                if(mapHeightEnabled !== newPerspective) {
                   toggleNamespaceChecked({
                     topicName: "/metadata",
                     namespace: "height",
@@ -578,7 +591,7 @@ onDoubleClick: (ev: MouseEvent, args: ?ReglClickInfo) => handleEvent("onDoubleCl
 // When the TopicTree is hidden, focus the <World> again so keyboard controls continue to work
 const worldRef = useRef <? typeof Worldview > (null);
 useEffect(() => {
-  if (!showTopicTree && worldRef.current) {
+  if(!showTopicTree && worldRef.current) {
     worldRef.current.focus();
   }
 }, [showTopicTree]);
@@ -593,24 +606,24 @@ const keyDownHandlers = useMemo(() => {
       setShowTopicTree(false);
       setDrawingTabType(null);
       searchTextProps.toggleSearchTextOpen(false);
-      if (document.activeElement && document.activeElement === containerRef.current) {
+      if(document.activeElement && document.activeElement === containerRef.current) {
         document.activeElement.blur();
       }
     },
     t: (e) => {
       e.preventDefault();
       // Unpin before enabling keyboard toggle open/close.
-      if (pinTopics) {
+      if(pinTopics) {
         saveConfig({ pinTopics: false });
         return;
       }
       setShowTopicTree((shown) => !shown);
     },
     f: (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
+      if(e.ctrlKey || e.metaKey) {
         e.preventDefault();
         searchTextProps.toggleSearchTextOpen(true);
-        if (!searchTextProps.searchInputRef || !searchTextProps.searchInputRef.current) {
+        if(!searchTextProps.searchInputRef || !searchTextProps.searchInputRef.current) {
           return;
         }
         searchTextProps.searchInputRef.current.select();
@@ -790,6 +803,8 @@ return (
                 isPlaying={isPlaying}
                 measureInfo={measureInfo}
                 measuringElRef={measuringElRef}
+                initialPoseInfo={initialPoseInfo}
+                initialPoseElRef={initialPoseElRef}
                 navigationGoalInfo={navigationGoalInfo}
                 navigationGoalElRef={navigationGoalElRef}
                 onAlignXYAxis={onAlignXYAxis}
@@ -805,6 +820,7 @@ return (
                 selectedObject={selectedObject}
                 selectedPolygonEditFormat={selectedPolygonEditFormat}
                 setMeasureInfo={setMeasureInfo}
+                setInitialPoseInfo={setInitialPoseInfo}
                 setNavigationGoalInfo={setNavigationGoalInfo}
                 showCrosshair={showCrosshair}
                 targetPose={targetPose}
