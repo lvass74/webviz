@@ -41,9 +41,15 @@ export default function PoseMarker({ points: { start, end }, color = defaultColo
     });
 
     if(start && end) {
+      const length = Math.sqrt((end.x - start.x) ** 2 + (end.y - start.y) ** 2);
+      const unitEnd: Point = {
+        ...end,
+        x: start.x + ((end.x - start.x) * 1) / length,
+        y: start.y + ((end.y - start.y) * 1) / length,
+      };
       arrows.push({
         id: `_${labelPrefix}_arrow`,
-        points: [start, end || start],
+        points: [start, unitEnd],
         pose: { ...defaultPose, position: { ...start } },
         scale: { x: lineSize, y: sphereSize, z: sphereSize },
         color: { ...color },
