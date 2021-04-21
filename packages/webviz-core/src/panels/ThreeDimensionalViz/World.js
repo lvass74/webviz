@@ -8,6 +8,7 @@
 
 import React, { type Node, forwardRef } from "react";
 import { Worldview, type CameraState, type MouseHandler, DEFAULT_CAMERA_STATE } from "regl-worldview";
+import tinycolor from "tinycolor2";
 
 import { getGlobalHooks } from "webviz-core/src/loadWebviz";
 import { LAYER_INDEX_DEFAULT_BASE } from "webviz-core/src/panels/ThreeDimensionalViz/constants";
@@ -17,6 +18,7 @@ import withHighlights from "webviz-core/src/panels/ThreeDimensionalViz/withWorld
 import WorldMarkers, { type InteractiveMarkersByType } from "webviz-core/src/panels/ThreeDimensionalViz/WorldMarkers";
 import inScreenshotTests from "webviz-core/src/stories/inScreenshotTests";
 import type { MarkerCollector, MarkerProvider } from "webviz-core/src/types/Scene";
+import { colors } from "webviz-core/src/util/sharedStyleConstants";
 
 type Props = {|
   autoTextBackgroundColor: boolean,
@@ -119,8 +121,12 @@ function World(
     }),
   };
 
+  const backgroundColor = tinycolor(colors.DARK).toRgb();
+  const backgroundColorArray = ["r", "g", "b"].map((key) => backgroundColor[key] / 255).concat(backgroundColor.a);
+
   return (
     <Worldview
+      backgroundColor={backgroundColorArray}
       cameraState={cameraState}
       enableStackedObjectEvents={!isPlaying}
       hideDebug={inScreenshotTests()}
