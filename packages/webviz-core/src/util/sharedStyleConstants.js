@@ -9,9 +9,11 @@
 import tinyColor from "tinycolor2";
 
 const robotStylesColors = {
-  DARK: "#08080a",
+  // DARK: "#08080a",
+  DARK: "#0000aa",
   DARK1: "#111114",
-  DARK2: "#1a1a1f",
+  // DARK2: "#1a1a1f",
+  DARK2: "#000099",
   DARK3: "#242429",
   DARK4: "#2d2d33",
   DARK5: "#36363d",
