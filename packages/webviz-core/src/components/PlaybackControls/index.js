@@ -221,5 +221,13 @@ const getProps = ({ pausePlayback, seekPlayback, startPlayback, playerState }) =
 });
 
 export default function PlaybackControls() {
-  return <UnconnectedPlaybackControls {...useMessagePipeline(getProps)} />;
+  const props = useMessagePipeline(getProps);
+  if (
+    props.player &&
+    props.player?.activeData?.currentTime &&
+    props.player?.activeData?.currentTime !== props.player?.activeData?.endTime
+  ) {
+    return <UnconnectedPlaybackControls {...props} />;
+  }
+  return null; // no playback control if playing live stream
 }
