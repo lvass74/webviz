@@ -27,15 +27,21 @@ const panelType = "Dashboard";
 const defaultConfig = {
   sensors: [
     { topic: "/scan", errorTimeout: 3, label: "Laserscan" },
-    { topic: "/kinect_camera/image_raw", errorTimeout: 3, label: "Camera" },
+    { topic: "/kinect_camera/image_raw/compressed", errorTimeout: 3, label: "Front camera" },
+    { topic: "/rear_camera/image_raw/compressed", errorTimeout: 3, label: "Rear camera" },
     { topic: "/cmd_vel_m", errorTimeout: 3, label: "Velocity command" },
   ],
   alarms: [
-    { label: "Obstacle", topic: "/teleop_status", predicate: (message) => message.data === "obstacle" },
-    { label: "FooBar", topic: "/foo", predicate: (message) => message.data === "bar" },
+    { label: "Obstacle", topic: "/teleop_status", predicate: (message) => message.data.toLowerCase() === "obstacle" },
   ],
   maxSpeed: 1,
 };
+
+const sum = (...values: number[]) => values.reduce((acc, curr) => (acc += curr), 0);
+const average = (...values: number[]) => {
+  const result = sum(...values) / values.length;
+  return result;
+}
 
 function Dashboard({ config }: Props) {
   const endTime = useMessagePipeline(
@@ -49,8 +55,8 @@ function Dashboard({ config }: Props) {
       (prevState, newMessages) =>
         //Math.round(newMessages[newMessages.length - 1].message.twist.twist.linear.x * 10) / 10,
         [
-          newMessages[newMessages.length - 1].message.twist.twist.linear.x,
-          newMessages[newMessages.length - 1].message.twist.twist.angular.z,
+          average(prevState[0], newMessages[newMessages.length - 1].message.twist.twist.linear.x),
+          average(prevState[1], newMessages[newMessages.length - 1].message.twist.twist.angular.z),
         ],
       []
     ),

@@ -22,6 +22,7 @@ import Publisher from "webviz-core/src/components/Publisher";
 import { type Topic } from "webviz-core/src/players/types";
 import type { RosDatatypes } from "webviz-core/src/types/RosDatatypes";
 import { ROSBRIDGE_WEBSOCKET_URL_QUERY_KEY } from "webviz-core/src/util/globalConstants";
+import VelocityCommandArrow from "./VelocityCommandArrow";
 
 // ----------------
 
@@ -154,14 +155,11 @@ function Teleop({ topics, config, saveConfig, ...rest }: Props) {
   const enableAssistedTeleopRequest = new ROSLIB.ServiceRequest({ data: true });
   const disableAssistedTeleopRequest = new ROSLIB.ServiceRequest({ data: false });
 
-  // teleopAssistanceEnablerService.callService(request, (result) => {
-  //   console.log(`Result for service call on ${teleopAssistanceEnablerService.name}: ${result.success} / ${result.message}`);
-  // });
-
-  const incrementLinearVelocity = incrementWithMax(config.maxVelocity)(config.incrementStep);
-  const decrementLinearVelocity = incrementWithMax(config.maxVelocity * -1)(config.incrementStep * -1);
-  const incrementAngularVelocity = incrementWithMax(config.maxVelocity * 0.5)(config.incrementStep * 0.5);
-  const decrementAngularVelocity = incrementWithMax(config.maxVelocity * -0.5)(config.incrementStep * -0.5);
+  const assistedSpeedMultiplier = state.assisted ? 2 : 1; // in assisted mode speed only controls to distance of the target point, better experience with higher virtual speed
+  const incrementLinearVelocity = incrementWithMax(config.maxVelocity * assistedSpeedMultiplier)(config.incrementStep * assistedSpeedMultiplier);
+  const decrementLinearVelocity = incrementWithMax(config.maxVelocity * assistedSpeedMultiplier * -1)(config.incrementStep * assistedSpeedMultiplier * -1);
+  const incrementAngularVelocity = incrementWithMax(config.maxVelocity * assistedSpeedMultiplier * 0.5)(config.incrementStep * assistedSpeedMultiplier * 0.5);
+  const decrementAngularVelocity = incrementWithMax(config.maxVelocity * assistedSpeedMultiplier * -0.5)(config.incrementStep * assistedSpeedMultiplier * -0.5);
 
   const NavigationKeyMap = new Map()
     .set("KeyW", (velocity) => ({
@@ -242,6 +240,7 @@ function Teleop({ topics, config, saveConfig, ...rest }: Props) {
       console.error("teleopAssistanceEnablerService is null");
       return;
     }
+    if(state.assisted) stopNavigation(); //stop navigation when turning off assistance
     teleopAssistanceEnablerService.callService(
       state.assisted ? disableAssistedTeleopRequest : enableAssistedTeleopRequest,
       (response) => {
@@ -254,6 +253,8 @@ function Teleop({ topics, config, saveConfig, ...rest }: Props) {
   const navigationKeysListener = React.useCallback((event: KeyboardEvent) => {
     const action = NavigationKeyMap.get(event.code);
     if(action) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
       const newVelocity = action(state.velocity);
       setState((state) => {
         const newState = { ...state, velocity: newVelocity };
@@ -331,6 +332,13 @@ function Teleop({ topics, config, saveConfig, ...rest }: Props) {
           getItemValue={getTopicName}
         />
       </SRow>
+      <Flex>
+        <VelocityCommandArrow
+          speed={state.velocity.linear.x}
+          rotation={state.velocity.angular.z}
+          maxSpeed={config.maxVelocity * assistedSpeedMultiplier}
+        />
+      </Flex>
       <Flex>
         <table style={{ textAlign: "center" }}>
           <tbody>

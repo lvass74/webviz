@@ -30,7 +30,7 @@ export default function SpeedOMeter({ speed, maxSpeed, rotation }: Props) {
     const displayedRotation = roundPrecision2(rotation);
     const displayedArrowRotation =
         displayedSpeed || displayedRotation
-            ? roundPrecision4(Math.atan2(displayedSpeed, displayedRotation * Math.sign(displayedSpeed))) - Math.PI / 2
+            ? roundPrecision4(Math.atan2(displayedSpeed, displayedRotation * Math.sign(displayedSpeed)) - Math.PI / 2)
             : 0;
 
     return (
@@ -42,16 +42,16 @@ export default function SpeedOMeter({ speed, maxSpeed, rotation }: Props) {
             />
             <div className="speedbox__groove" />
             <div className="speedbox__odo">
+                <div className="speedbox__down">
+                    {displayedSpeed}
+                    <span>m/s</span>
+                </div>
                 <div
                     className="speedbox__up"
                     style={{
                         transform: `rotate(${displayedArrowRotation}rad)`,
                     }}>
                     &#11161;
-        </div>
-                <div className="speedbox__down">
-                    {displayedSpeed}
-                    <span>m/s</span>
                 </div>
             </div>
         </div>
