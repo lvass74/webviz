@@ -67,7 +67,7 @@ export default React.memo < Props > (function PoseMarkers({ children, layerIndex
   const arrowMarkers = [];
   children.forEach((marker, i) => {
     const { pose, settings, interactionData } = marker;
-    if (settings?.addCarOutlineBuffer) {
+    if(settings?.addCarOutlineBuffer) {
       filledPolygons.push({
         pose,
         interactionData,
@@ -76,7 +76,7 @@ export default React.memo < Props > (function PoseMarkers({ children, layerIndex
       });
     }
 
-    switch (settings?.modelType) {
+    switch(settings?.modelType) {
       case "car-outline": {
         filledPolygons.push({
           pose,
@@ -96,7 +96,7 @@ export default React.memo < Props > (function PoseMarkers({ children, layerIndex
       }
       case "robot-model": {
         models.push(
-          <RobotModel layerIndex={layerIndex} key={i}>
+          <RobotModel layerIndex={layerIndex} key={i} descriptionTopic={settings?.descriptionTopic}>
             {{ pose, alpha: settings.alpha || 1, interactionData }}
           </RobotModel>
         );
@@ -104,11 +104,11 @@ export default React.memo < Props > (function PoseMarkers({ children, layerIndex
       }
       case "arrow":
       default: {
-        if (settings && settings.overrideColor) {
+        if(settings && settings.overrideColor) {
           marker = { ...marker, color: settings.overrideColor };
         }
 
-        if (settings && settings.size) {
+        if(settings && settings.size) {
           marker = {
             ...marker,
             scale: {

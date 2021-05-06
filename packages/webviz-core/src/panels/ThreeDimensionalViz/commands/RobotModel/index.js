@@ -86,9 +86,9 @@ type Props = {|
 export default function RobotModel({
   children: { pose, alpha = 1, scale = { x: 1, y: 1, z: 1 }, interactionData },
   layerIndex,
+  descriptionTopic = "/robot_description",
 }: Props) {
-  const topicName = "/robot_description";
-  const messages = useMessagesByTopic({ topics: [topicName], historySize: 1 })[topicName];
+  const messages = useMessagesByTopic({ topics: [descriptionTopic], historySize: 1 })[descriptionTopic];
   const robotModel = messages[0] ? messages[0].message.data : null;
   const loadRobotModel = useMemo(() => () => _loadRobotModel(robotModel), [robotModel])
   if(!robotModel) return null;
