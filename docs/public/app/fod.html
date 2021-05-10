@@ -1,0 +1,76 @@
+<!--
+  Copyright (c) 2018-present, Cruise LLC
+
+  This source code is licensed under the Apache License, Version 2.0,
+  found in the LICENSE file in the root directory of this source tree.
+  You may not use this file except in compliance with the License.
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <script>
+  </script>
+  <!-- CORS_AUTHORIZATION_SCRIPT -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta name="theme-color" content="#000000" />
+  <title>webviz</title>
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+  <style>
+    #startup-form > * { display: block; }
+    #startup-form > label, button { margin-top: 1em; }
+  </style>
+</head>
+
+<body>
+  <form id="startup-form" onsubmit="return start(this)">
+    <label>Websocket server IP</label>
+    <input type="text" placeholder="192.168.0.2" name="websocket-ip" />
+    <label>Websocket server port</label>
+    <input type="text" value="9000" placeholder="9000" name="websocket-port" />
+    <label>webviz layout</label>
+    <input type="text" value="fod" placeholder="fod" name="webviz-layout" />
+    <button type="submit">Start</button>
+  </form>
+</body>
+<script>
+  const getFormFieldValueByName = (form, fieldName) => {
+    const field = form.querySelector(`[name="${fieldName}"]`);
+    if(field) return field.value
+    return null;
+  }
+  const verifyLayoutUrl = (layoutUrl) => fetch(layoutUrl);
+  const stripFileFromUrl = (url) => url.replace(/([^\/]+)$/, "");
+
+  const start = (form) => {
+    const ip = getFormFieldValueByName(form, "websocket-ip");
+    const port = getFormFieldValueByName(form, "websocket-port");
+    const layout = getFormFieldValueByName(form, "webviz-layout");
+    if(!(ip && port)) {
+      alert("please supply ip and port!");
+      return false;
+    }
+
+    if(layout) {
+      const layoutUrl = stripFileFromUrl(window.location.href) + `${layout}-webviz-layout.json`;
+      verifyLayoutUrl(layoutUrl)
+      .then((response) => {
+        if(!response.ok) throw new Error(response.text)
+        const webvizUrl = 
+          stripFileFromUrl(window.location.href) + "?" +
+          `rosbridge-websocket-url=ws://${ip}:${port}` + "&" +
+          `layout-url=${layoutUrl}`
+        window.location.href = webvizUrl;
+        return false;
+      })
+      .catch(() => {
+        alert(`Failed to load layout from ${layoutUrl}`);
+        return false;
+      });
+    }
+
+    return false;
+  }
+</script>
+</html>
